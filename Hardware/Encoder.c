@@ -13,8 +13,40 @@ void Encoder_Init(void)
     motor_2.countnum = 0;
 }
 
-/* 左轮编码器：motor_2 对应左轮。
- * 底层统一方向：小车前进时 count 增加，后退时 count 减少。
+/* motor_1 = right encoder, motor_2 = left encoder.
+ * Encoder_GetLeftCount() returns motor_2.countnum.
+ * Encoder_GetRightCount() returns motor_1.countnum.
+ */
+int32_t Encoder_GetLeftCount(void)
+{
+    return motor_2.countnum;
+}
+
+int32_t Encoder_GetRightCount(void)
+{
+    return motor_1.countnum;
+}
+
+void Encoder_ClearCount(void)
+{
+    motor_1.countnum = 0;
+    motor_2.countnum = 0;
+    motor_1.lastcount = 0;
+    motor_2.lastcount = 0;
+}
+
+float Encoder_GetLeftSpeed(void)
+{
+    return motor_2.speed;
+}
+
+float Encoder_GetRightSpeed(void)
+{
+    return motor_1.speed;
+}
+
+/* ???????????motor_2 ????????
+ * ?????????С?????? count ?????????? count ?????
  */
 void TIMA1_IRQHandler(void) {
   switch (DL_TimerA_getPendingInterrupt(ENCAM1_INST)) 
@@ -31,8 +63,8 @@ void TIMA1_IRQHandler(void) {
   }
 }
  
-/* 右轮编码器：motor_1 对应右轮。
- * 底层统一方向：小车前进时 count 增加，后退时 count 减少。
+/* ???????????motor_1 ????????
+ * ?????????С?????? count ?????????? count ?????
  */
 void TIMG8_IRQHandler(void) {
   switch (DL_TimerG_getPendingInterrupt(ENCAM2_INST)) 
@@ -50,52 +82,52 @@ void TIMG8_IRQHandler(void) {
 }
 
 
-// 左电机速度计算 (在 TIMER_0 中断中调用，周期10ms)
+// ?????????? (?? TIMER_0 ?ж??е????????10ms)
 void Encoder_CalcSpeed_M1(void)
 {
     const float dt = 0.01f;  // 10ms
     
     int32_t delta = motor_1.countnum - motor_1.lastcount;
     motor_1.lastcount = motor_1.countnum;
-    motor_1.speed_raw = (float)delta;  // 脉冲/10ms
+    motor_1.speed_raw = (float)delta;  // ????/10ms
     
-    // 转换为 RPM: 脉冲/10ms × 100 × 60 ÷ 每圈脉冲数
+    // ???? RPM: ????/10ms ?? 100 ?? 60 ?? ????????
     motor_1.speed = motor_1.speed_raw * 6000.0f / PULSE_PER_CYCLE;
 }
 
-// 右电机速度计算 (在 TIMER_1 中断中调用，周期10ms)
+// ?????????? (?? TIMER_1 ?ж??е????????10ms)
 void Encoder_CalcSpeed_M2(void)
 {
     const float dt = 0.01f;  // 10ms
     
     int32_t delta = motor_2.countnum - motor_2.lastcount;
     motor_2.lastcount = motor_2.countnum;
-    motor_2.speed_raw = (float)delta;  // 脉冲/10ms
+    motor_2.speed_raw = (float)delta;  // ????/10ms
     
-    // 转换为 RPM: 脉冲/10ms × 100 × 60 ÷ 每圈脉冲数
+    // ???? RPM: ????/10ms ?? 100 ?? 60 ?? ????????
     motor_2.speed = motor_2.speed_raw * 6000.0f / PULSE_PER_CYCLE;
 }
 
-// 在 TIMER_0 中断中调用左轮测速 (10ms)
+// ?? TIMER_0 ?ж??е?????????? (10ms)
 void TIMER_0_INST_IRQHandler(void)
 {
     switch (DL_TimerG_getPendingInterrupt(TIMER_0_INST)) 
     {
         case DL_TIMER_IIDX_ZERO:
-            Encoder_CalcSpeed_M1();  // 只测左轮
+            Encoder_CalcSpeed_M1();  // ???????
             break;
         default:
             break;
     }
 }
 
-// 在 TIMER_1 中断中调用右轮测速 (10ms)
+// ?? TIMER_1 ?ж??е?????????? (10ms)
 void TIMER_1_INST_IRQHandler(void)
 {
     switch (DL_TimerG_getPendingInterrupt(TIMER_1_INST)) 
     {
         case DL_TIMER_IIDX_ZERO:
-            Encoder_CalcSpeed_M2();  // 只测右轮
+            Encoder_CalcSpeed_M2();  // ???????
             break;
         default:
             break;
