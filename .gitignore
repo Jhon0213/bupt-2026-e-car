@@ -1,0 +1,47 @@
+# Build outputs
+Debug/
+Release/
+build/
+out/
+Objects/
+Listings/
+*.o
+*.obj
+*.elf
+*.hex
+*.bin
+*.map
+*.lst
+*.axf
+*.d
+*.crf
+*.htm
+*.lnp
+
+# Keil generated / local user files
+*.uvguix.*
+*.uvopt
+*.dep
+*.scvd
+JLinkLog.txt
+JLinkSettings.ini
+
+# IAR / GCC temporary outputs
+*.ewt
+*.pbd
+*.pbi
+*.xcl
+*.srec
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+
+# Logs and backup
+*.log
+*.tmp
+*.bak
