@@ -31,35 +31,24 @@
  */
 
 #include "ti_msp_dl_config.h"
-#include "board.h"
-#include "lcd_init.h"
-#include "lcd.h"
-#include "Motor.h"
-#include "Encoder.h"
-#include "control.h"
-#include "stdio.h"
+#include "Hardware/Motor.h"
+#include "Public/Board/board.h"
+
+#define TEST_PWM 400
 
 int main(void)
 {
     board_init();
-		LCD_Init();//LCD≥ı ºªØ
-    LCD_Fill(0,0,LCD_W,LCD_H,BLACK);
-		sendCaliYawCommand();
-		Motor_Init();
-		Encoder_Init();
-//		performCaliBias();
-		while(1)
-		{
-			printf("%.4f,%.4f\r\n",GyroZ(),Yaw());
-//			delay_ms(100);
-//			LCD_ShowFloatNumEx(0, 0, GyroZ(), 4, WHITE, BLACK, 16);
-//			LCD_ShowFloatNumEx(0, 20, Yaw(), 4, WHITE, BLACK, 16);
-//			LCD_ShowIntNum(0,40,motor_1.countnum,WHITE, BLACK, 16);
-//			LCD_ShowIntNum(0,60,motor_2.countnum,WHITE, BLACK, 16);
-//			LCD_ShowIntNum(60,40,motor_1.speed,WHITE, BLACK, 16);
-//			LCD_ShowIntNum(60,60,motor_2.speed,WHITE, BLACK, 16);
-//      yaw_control_with_gyro(200, 0);    
-//			Speed_Control(0, 0);
-		}
-		
+    Motor_Init();
+
+    delay_ms(1000);
+
+    while (1)
+    {
+        move(TEST_PWM, TEST_PWM);
+        delay_ms(3000);
+
+        move(0, 0);
+        delay_ms(1000);
+    }
 }
