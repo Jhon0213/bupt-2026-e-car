@@ -62,6 +62,7 @@ SYSCONFIG_WEAK void SYSCFG_DL_init(void)
     SYSCFG_DL_TIMER_1_init();
     SYSCFG_DL_UART_0_init();
     SYSCFG_DL_UART_1_init();
+    SYSCFG_DL_UART_2_init();
     SYSCFG_DL_SPI_LCD_init();
     /* Ensure backup structures have no valid state */
 	gMotorPWMBackup.backupRdy 	= false;
@@ -111,6 +112,7 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_TimerG_reset(TIMER_1_INST);
     DL_UART_Main_reset(UART_0_INST);
     DL_UART_Main_reset(UART_1_INST);
+    DL_UART_Main_reset(UART_2_INST);
     DL_SPI_reset(SPI_LCD_INST);
 
     DL_GPIO_enablePower(GPIOA);
@@ -122,6 +124,7 @@ SYSCONFIG_WEAK void SYSCFG_DL_initPower(void)
     DL_TimerG_enablePower(TIMER_1_INST);
     DL_UART_Main_enablePower(UART_0_INST);
     DL_UART_Main_enablePower(UART_1_INST);
+    DL_UART_Main_enablePower(UART_2_INST);
     DL_SPI_enablePower(SPI_LCD_INST);
     delay_cycles(POWER_STARTUP_DELAY);
 }
@@ -145,6 +148,10 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
         GPIO_UART_1_IOMUX_TX, GPIO_UART_1_IOMUX_TX_FUNC);
     DL_GPIO_initPeripheralInputFunction(
         GPIO_UART_1_IOMUX_RX, GPIO_UART_1_IOMUX_RX_FUNC);
+    DL_GPIO_initPeripheralOutputFunction(
+        GPIO_UART_2_IOMUX_TX, GPIO_UART_2_IOMUX_TX_FUNC);
+    DL_GPIO_initPeripheralInputFunction(
+        GPIO_UART_2_IOMUX_RX, GPIO_UART_2_IOMUX_RX_FUNC);
 
     DL_GPIO_initPeripheralOutputFunction(
         GPIO_SPI_LCD_IOMUX_SCLK, GPIO_SPI_LCD_IOMUX_SCLK_FUNC);
@@ -498,6 +505,32 @@ SYSCONFIG_WEAK void SYSCFG_DL_UART_1_init(void)
 
 
     DL_UART_Main_enable(UART_1_INST);
+}
+
+static const DL_UART_Main_ClockConfig gUART_2ClockConfig = {
+    .clockSel    = DL_UART_MAIN_CLOCK_MFCLK,
+    .divideRatio = DL_UART_MAIN_CLOCK_DIVIDE_RATIO_1
+};
+
+static const DL_UART_Main_Config gUART_2Config = {
+    .mode        = DL_UART_MAIN_MODE_NORMAL,
+    .direction   = DL_UART_MAIN_DIRECTION_TX_RX,
+    .flowControl = DL_UART_MAIN_FLOW_CONTROL_NONE,
+    .parity      = DL_UART_MAIN_PARITY_NONE,
+    .wordLength  = DL_UART_MAIN_WORD_LENGTH_8_BITS,
+    .stopBits    = DL_UART_MAIN_STOP_BITS_ONE
+};
+
+SYSCONFIG_WEAK void SYSCFG_DL_UART_2_init(void)
+{
+    DL_UART_Main_setClockConfig(UART_2_INST,
+        (DL_UART_Main_ClockConfig *) &gUART_2ClockConfig);
+    DL_UART_Main_init(UART_2_INST, (DL_UART_Main_Config *) &gUART_2Config);
+    DL_UART_Main_setOversampling(UART_2_INST, DL_UART_OVERSAMPLING_RATE_16X);
+    DL_UART_Main_setBaudRateDivisor(UART_2_INST,
+        UART_2_IBRD_4_MHZ_9600_BAUD, UART_2_FBRD_4_MHZ_9600_BAUD);
+    DL_UART_Main_enableInterrupt(UART_2_INST, DL_UART_MAIN_INTERRUPT_RX);
+    DL_UART_Main_enable(UART_2_INST);
 }
 
 static const DL_SPI_Config gSPI_LCD_config = {

@@ -1,92 +1,43 @@
-/*
- * Copyright (c) 2021, Texas Instruments Incorporated
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- *
- * *  Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *
- * *  Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *
- * *  Neither the name of Texas Instruments Incorporated nor the names of
- *    its contributors may be used to endorse or promote products derived
- *    from this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
- * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
- * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
 #include "ti_msp_dl_config.h"
+
+#include "Hardware/Bluetooth.h"
 #include "Public/Board/board.h"
-#include "Hardware/Motor.h"
-#include "Hardware/Encoder.h"
 
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 
-static void Clear_Encoder_Count(void)
+static void PrintReceivedByte(uint8_t byte)
 {
-    motor_1.countnum = 0;
-    motor_2.countnum = 0;
-    motor_1.lastcount = 0;
-    motor_2.lastcount = 0;
+    if ((byte == '\r') || (byte == '\n') ||
+        ((byte >= 0x20U) && (byte <= 0x7EU)))
+    {
+        printf("%c", (char)byte);
+    }
+    else
+    {
+        printf("<%02X>", (unsigned int)byte);
+    }
 }
 
 int main(void)
 {
+    uint8_t byte;
+
     board_init();
+    Bluetooth_Init();
 
-    Motor_Init();
-    Encoder_Init();
+    printf("\r\nHC-06D Bluetooth test start\r\n");
+    printf("UART2: PA21(TX), PA22(RX), 9600 baud, 8-N-1\r\n");
+    printf("Send text from the phone. Received data is echoed back.\r\n\r\n");
 
-    move(0, 0);
-    delay_ms(1000);
-
-    printf("Both motor encoder verify start\r\n");
-    printf("motor_1 = right encoder, motor_2 = left encoder\r\n");
+    Bluetooth_SendString("MSPM0 Bluetooth ready\r\n");
 
     while (1)
     {
-        Clear_Encoder_Count();
-
-        printf("\r\nTest 1: move(300, 300), both forward\r\n");
-        move(300, 300);
-        delay_ms(3000);
-        move(0, 0);
-        delay_ms(500);
-
-        printf("After forward: right motor_1 = %ld, left motor_2 = %ld\r\n",
-               motor_1.countnum,
-               motor_2.countnum);
-
-        delay_ms(3000);
-
-        Clear_Encoder_Count();
-
-        printf("\r\nTest 2: move(-300, -300), both backward\r\n");
-        move(-300, -300);
-        delay_ms(3000);
-        move(0, 0);
-        delay_ms(500);
-
-        printf("After backward: right motor_1 = %ld, left motor_2 = %ld\r\n",
-               motor_1.countnum,
-               motor_2.countnum);
-
-        delay_ms(5000);
+        while (Bluetooth_ReadByte(&byte))
+        {
+            PrintReceivedByte(byte);
+            Bluetooth_SendByte(byte);
+        }
     }
 }

@@ -445,6 +445,16 @@
               <FilePath>..\Hardware\Motor.c</FilePath>
             </File>
             <File>
+              <FileName>IMU.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\IMU.c</FilePath>
+            </File>
+            <File>
+              <FileName>Bluetooth.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\Bluetooth.c</FilePath>
+            </File>
+            <File>
               <FileName>control.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hardware\CONTROL\control.c</FilePath>

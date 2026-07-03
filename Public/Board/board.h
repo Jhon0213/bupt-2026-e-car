@@ -33,22 +33,8 @@ void delay_ms(int __ms);
 void delay_1us(int __us);
 void delay_1ms(int __ms);
 
-
-struct SAngle
-{
-		float Yaw;
-};
-extern struct SAngle stcAngle;
-
-struct SGyro
-{
-    short rawWz;
-    float wz;
-};
-extern struct SGyro stcGyro;
+/* Legacy control interface. Implemented by Hardware/IMU.c. */
 float GyroZ(void);
 float Yaw(void);
-void sendCaliYawCommand(void);
-void performCaliBias(void);
 	
 #endif
