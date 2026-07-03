@@ -21,7 +21,13 @@ void move(int left, int right)
 	int left_pwm = left;
 	int right_pwm = right;
 
-	/* AIN/BIN 驱动板正转测试版本：暂不做真正反转，只将负值取绝对值。 */
+	/* 当前接线：
+	 * PA15 -> AIN1，对应 GPIO_MotorPWM_C2_IDX
+	 * PA27 -> AIN2，对应 Motor2_M2PIN_27_PIN
+	 * PA9  -> BIN1，对应 GPIO_MotorPWM_C1_IDX
+	 * PA25 -> BIN2，对应 Motor1_M1PIN_25_PIN
+	 * 当前软件修正：左轮正方向正常；右轮物理方向相反，因此在 move() 中对右轮方向做软件反向。
+	 */
 	if (left_pwm < 0) {
 		left_pwm = -left_pwm;
 	}
@@ -29,7 +35,6 @@ void move(int left, int right)
 		right_pwm = -right_pwm;
 	}
 
-	/* PWM 限幅，避免超过定时器周期。 */
 	if (left_pwm > 500) {
 		left_pwm = 500;
 	}
@@ -37,9 +42,23 @@ void move(int left, int right)
 		right_pwm = 500;
 	}
 
-	/* 当前始终保持 AIN2 / BIN2 为低电平，仅通过 AIN1 / BIN1 的 PWM 做正转测试。 */
-	DL_GPIO_clearPins(Motor2_PORT, Motor2_M2PIN_27_PIN);
-	DL_GPIO_clearPins(Motor1_PORT, Motor1_M1PIN_25_PIN);
+	if (left > 0) {
+		DL_GPIO_clearPins(Motor2_PORT, Motor2_M2PIN_27_PIN);
+	} else if (left < 0) {
+		DL_GPIO_setPins(Motor2_PORT, Motor2_M2PIN_27_PIN);
+	} else {
+		left_pwm = 0;
+		DL_GPIO_clearPins(Motor2_PORT, Motor2_M2PIN_27_PIN);
+	}
+
+	if (right > 0) {
+		DL_GPIO_setPins(Motor1_PORT, Motor1_M1PIN_25_PIN);
+	} else if (right < 0) {
+		DL_GPIO_clearPins(Motor1_PORT, Motor1_M1PIN_25_PIN);
+	} else {
+		right_pwm = 0;
+		DL_GPIO_clearPins(Motor1_PORT, Motor1_M1PIN_25_PIN);
+	}
 
 	DL_TimerA_setCaptureCompareValue(MotorPWM_INST, left_pwm, GPIO_MotorPWM_C2_IDX);
 	DL_TimerA_setCaptureCompareValue(MotorPWM_INST, right_pwm, GPIO_MotorPWM_C1_IDX);

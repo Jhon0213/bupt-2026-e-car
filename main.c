@@ -44,11 +44,23 @@ int main(void)
     delay_ms(1000);
 
     while (1)
-    {
-        move(TEST_PWM, TEST_PWM);
-        delay_ms(3000);
+{
+    move(400, 0);
+    delay_ms(2000);
 
-        move(0, 0);
-        delay_ms(1000);
-    }
+    move(0, 0);
+    delay_ms(1000);
+
+    move(0, 400);
+    delay_ms(2000);
+
+    move(0, 0);
+    delay_ms(1000);
+
+    move(400, 400);
+    delay_ms(2000);
+
+    move(0, 0);
+    delay_ms(2000);
+}
 }
