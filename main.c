@@ -31,36 +31,62 @@
  */
 
 #include "ti_msp_dl_config.h"
-#include "Hardware/Motor.h"
 #include "Public/Board/board.h"
+#include "Hardware/Motor.h"
+#include "Hardware/Encoder.h"
 
-#define TEST_PWM 400
+#include <stdio.h>
+#include <stdint.h>
+
+static void Clear_Encoder_Count(void)
+{
+    motor_1.countnum = 0;
+    motor_2.countnum = 0;
+    motor_1.lastcount = 0;
+    motor_2.lastcount = 0;
+}
 
 int main(void)
 {
     board_init();
-    Motor_Init();
 
+    Motor_Init();
+    Encoder_Init();
+
+    move(0, 0);
     delay_ms(1000);
+
+    printf("Both motor encoder verify start\r\n");
+    printf("motor_1 = right encoder, motor_2 = left encoder\r\n");
 
     while (1)
-{
-    move(400, 0);
-    delay_ms(2000);
+    {
+        Clear_Encoder_Count();
 
-    move(0, 0);
-    delay_ms(1000);
+        printf("\r\nTest 1: move(300, 300), both forward\r\n");
+        move(300, 300);
+        delay_ms(3000);
+        move(0, 0);
+        delay_ms(500);
 
-    move(0, 400);
-    delay_ms(2000);
+        printf("After forward: right motor_1 = %ld, left motor_2 = %ld\r\n",
+               motor_1.countnum,
+               motor_2.countnum);
 
-    move(0, 0);
-    delay_ms(1000);
+        delay_ms(3000);
 
-    move(400, 400);
-    delay_ms(2000);
+        Clear_Encoder_Count();
 
-    move(0, 0);
-    delay_ms(2000);
-}
+        printf("\r\nTest 2: move(-300, -300), both backward\r\n");
+        move(-300, -300);
+        delay_ms(3000);
+        move(0, 0);
+        delay_ms(500);
+
+        printf("After backward: right motor_1 = %ld, left motor_2 = %ld\r\n",
+               motor_1.countnum,
+               motor_2.countnum);
+
+        delay_ms(5000);
+    }
 }

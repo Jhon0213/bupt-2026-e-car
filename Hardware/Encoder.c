@@ -13,15 +13,17 @@ void Encoder_Init(void)
     motor_2.countnum = 0;
 }
 
-/*左电机的编码器值*/
+/* 左轮编码器：motor_2 对应左轮。
+ * 底层统一方向：小车前进时 count 增加，后退时 count 减少。
+ */
 void TIMA1_IRQHandler(void) {
   switch (DL_TimerA_getPendingInterrupt(ENCAM1_INST)) 
   {
     case DL_TIMERA_IIDX_CC0_DN:
         if (DL_GPIO_readPins(ENC_B_PORT, ENC_B_M1_PIN) != 0) {
-            motor_2.countnum++;
-        } else {
             motor_2.countnum--;
+        } else {
+            motor_2.countnum++;
         }
         break;
     default:
@@ -29,15 +31,17 @@ void TIMA1_IRQHandler(void) {
   }
 }
  
-/*右电机的编码器值*/
+/* 右轮编码器：motor_1 对应右轮。
+ * 底层统一方向：小车前进时 count 增加，后退时 count 减少。
+ */
 void TIMG8_IRQHandler(void) {
   switch (DL_TimerG_getPendingInterrupt(ENCAM2_INST)) 
   {
     case DL_TIMERG_IIDX_CC0_DN:
         if (DL_GPIO_readPins(ENC_B_PORT, ENC_B_M2_PIN) != 0) {
-            motor_1.countnum--;
-        } else {
             motor_1.countnum++;
+        } else {
+            motor_1.countnum--;
         }
         break;
     default:

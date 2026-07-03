@@ -256,14 +256,15 @@ void performCaliBias(void)
 
 
 
-//printf函数重定义
+//printf 输出 UART0
+//UART0 TX = PA10，UART0 RX = PA11，波特率 = 115200
+//USB-TTL 接线：PA10 -> USB-TTL RXD，GND -> USB-TTL GND
 int fputc(int ch, FILE *stream)
 {
-	//当串口0忙的时候等待，不忙的时候再发送传进来的字符
-	while( DL_UART_isBusy(UART_1_INST) == true );
-	
-	DL_UART_Main_transmitData(UART_1_INST, ch);
-	
+	while (DL_UART_isBusy(UART_0_INST) == true);
+
+	DL_UART_Main_transmitData(UART_0_INST, ch);
+
 	return ch;
 }
 
