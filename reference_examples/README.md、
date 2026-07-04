@@ -1,0 +1,11 @@
+# Reference Examples
+
+This folder contains grayscale sensor reference examples.
+
+Rules:
+1. These files are read-only reference code.
+2. Do not compile these files into the main Keil project.
+3. Do not copy ti_msp_dl_config.c/h or empty.syscfg from examples into the main project.
+4. Do not copy main.c, empty.c, SysTick_Handler, GROUP1_IRQHandler directly.
+5. Only extract ADC reading, calibration, binarization, and error calculation logic.
+6. All pins and peripherals must be configured in the main project's empty.syscfg.

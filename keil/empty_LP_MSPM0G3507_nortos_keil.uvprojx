@@ -134,11 +134,11 @@
             <RunIndependent>0</RunIndependent>
             <UpdateFlashBeforeDebugging>1</UpdateFlashBeforeDebugging>
             <Capability>1</Capability>
-            <DriverSelection>0</DriverSelection>
+            <DriverSelection>4096</DriverSelection>
           </Flash1>
           <bUseTDR>1</bUseTDR>
-          <Flash2></Flash2>
-          <Flash3></Flash3>
+          <Flash2>BIN\UL2CM3.DLL</Flash2>
+          <Flash3>"" ()</Flash3>
           <Flash4></Flash4>
           <pFcarmOut></pFcarmOut>
           <pFcarmGrp></pFcarmGrp>
@@ -410,11 +410,6 @@
               <FilePath>..\main.c</FilePath>
             </File>
             <File>
-              <FileName>boot_config.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\boot_config.c</FilePath>
-            </File>
-            <File>
               <FileName>boot_config.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\boot_config.h</FilePath>
@@ -424,16 +419,6 @@
         <Group>
           <GroupName>Hardware</GroupName>
           <Files>
-            <File>
-              <FileName>lcd.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Hardware\LCD\lcd.c</FilePath>
-            </File>
-            <File>
-              <FileName>lcd_init.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\Hardware\LCD\lcd_init.c</FilePath>
-            </File>
             <File>
               <FileName>Encoder.c</FileName>
               <FileType>1</FileType>
@@ -450,9 +435,9 @@
               <FilePath>..\Hardware\IMU.c</FilePath>
             </File>
             <File>
-              <FileName>Bluetooth.c</FileName>
+              <FileName>Gray.c</FileName>
               <FileType>1</FileType>
-              <FilePath>..\Hardware\Bluetooth.c</FilePath>
+              <FilePath>..\Hardware\Gray.c</FilePath>
             </File>
             <File>
               <FileName>control.c</FileName>

@@ -189,23 +189,15 @@ extern "C" {
 
 
 
-/* Defines for SPI_LCD */
-#define SPI_LCD_INST                                                       SPI1
-#define SPI_LCD_INST_IRQHandler                                 SPI1_IRQHandler
-#define SPI_LCD_INST_INT_IRQN                                     SPI1_INT_IRQn
-#define GPIO_SPI_LCD_PICO_PORT                                            GPIOB
-#define GPIO_SPI_LCD_PICO_PIN                                     DL_GPIO_PIN_8
-#define GPIO_SPI_LCD_IOMUX_PICO                                 (IOMUX_PINCM25)
-#define GPIO_SPI_LCD_IOMUX_PICO_FUNC                 IOMUX_PINCM25_PF_SPI1_PICO
-#define GPIO_SPI_LCD_POCI_PORT                                            GPIOB
-#define GPIO_SPI_LCD_POCI_PIN                                     DL_GPIO_PIN_7
-#define GPIO_SPI_LCD_IOMUX_POCI                                 (IOMUX_PINCM24)
-#define GPIO_SPI_LCD_IOMUX_POCI_FUNC                 IOMUX_PINCM24_PF_SPI1_POCI
-/* GPIO configuration for SPI_LCD */
-#define GPIO_SPI_LCD_SCLK_PORT                                            GPIOB
-#define GPIO_SPI_LCD_SCLK_PIN                                     DL_GPIO_PIN_9
-#define GPIO_SPI_LCD_IOMUX_SCLK                                 (IOMUX_PINCM26)
-#define GPIO_SPI_LCD_IOMUX_SCLK_FUNC                 IOMUX_PINCM26_PF_SPI1_SCLK
+/* Port definition for Pin Group GRAY */
+#define GRAY_PORT                                                        (GPIOB)
+
+/* Defines for DAT: GPIOB.8 with pinCMx 25 on package pin 60 */
+#define GRAY_DAT_PIN                                            (DL_GPIO_PIN_8)
+#define GRAY_DAT_IOMUX                                           (IOMUX_PINCM25)
+/* Defines for CLK: GPIOB.9 with pinCMx 26 on package pin 61 */
+#define GRAY_CLK_PIN                                            (DL_GPIO_PIN_9)
+#define GRAY_CLK_IOMUX                                           (IOMUX_PINCM26)
 
 
 
@@ -221,21 +213,6 @@ extern "C" {
 /* Defines for M2PIN_27: GPIOA.27 with pinCMx 60 on package pin 31 */
 #define Motor2_M2PIN_27_PIN                                     (DL_GPIO_PIN_27)
 #define Motor2_M2PIN_27_IOMUX                                    (IOMUX_PINCM60)
-/* Port definition for Pin Group LCD */
-#define LCD_PORT                                                         (GPIOB)
-
-/* Defines for RES: GPIOB.10 with pinCMx 27 on package pin 62 */
-#define LCD_RES_PIN                                             (DL_GPIO_PIN_10)
-#define LCD_RES_IOMUX                                            (IOMUX_PINCM27)
-/* Defines for DC: GPIOB.11 with pinCMx 28 on package pin 63 */
-#define LCD_DC_PIN                                              (DL_GPIO_PIN_11)
-#define LCD_DC_IOMUX                                             (IOMUX_PINCM28)
-/* Defines for CS: GPIOB.14 with pinCMx 31 on package pin 2 */
-#define LCD_CS_PIN                                              (DL_GPIO_PIN_14)
-#define LCD_CS_IOMUX                                             (IOMUX_PINCM31)
-/* Defines for BLK: GPIOB.26 with pinCMx 57 on package pin 28 */
-#define LCD_BLK_PIN                                             (DL_GPIO_PIN_26)
-#define LCD_BLK_IOMUX                                            (IOMUX_PINCM57)
 /* Port definition for Pin Group ENC_B */
 #define ENC_B_PORT                                                       (GPIOB)
 
@@ -260,7 +237,6 @@ void SYSCFG_DL_TIMER_1_init(void);
 void SYSCFG_DL_UART_0_init(void);
 void SYSCFG_DL_UART_1_init(void);
 void SYSCFG_DL_UART_2_init(void);
-void SYSCFG_DL_SPI_LCD_init(void);
 
 
 bool SYSCFG_DL_saveConfiguration(void);
