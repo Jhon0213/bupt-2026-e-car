@@ -9,6 +9,7 @@ void Bluetooth_Init(void);
 bool Bluetooth_ReadByte(uint8_t *byte);
 void Bluetooth_SendByte(uint8_t byte);
 void Bluetooth_SendString(const char *text);
+int Bluetooth_Printf(const char *fmt, ...);
 uint32_t Bluetooth_GetReceivedCount(void);
 uint32_t Bluetooth_GetOverflowCount(void);
 

@@ -2,6 +2,9 @@
 
 #include "ti_msp_dl_config.h"
 
+#include <stdarg.h>
+#include <stdio.h>
+
 #define BLUETOOTH_RX_BUFFER_SIZE (128U)
 #define BLUETOOTH_RX_BUFFER_MASK (BLUETOOTH_RX_BUFFER_SIZE - 1U)
 
@@ -56,6 +59,24 @@ void Bluetooth_SendString(const char *text)
     {
         Bluetooth_SendByte((uint8_t)*text++);
     }
+}
+
+int Bluetooth_Printf(const char *fmt, ...)
+{
+    char buffer[160];
+    va_list args;
+    int len;
+
+    va_start(args, fmt);
+    len = vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+
+    if (len > 0)
+    {
+        Bluetooth_SendString(buffer);
+    }
+
+    return len;
 }
 
 uint32_t Bluetooth_GetReceivedCount(void)

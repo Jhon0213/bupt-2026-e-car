@@ -1,43 +1,75 @@
 #include "ti_msp_dl_config.h"
 
 #include "Hardware/Bluetooth.h"
+#include "Hardware/Encoder.h"
+#include "Hardware/Motor.h"
 #include "Public/Board/board.h"
 
 #include <stdint.h>
 #include <stdio.h>
 
-static void PrintReceivedByte(uint8_t byte)
+#define APP_MODE_OPEN_LOOP_LOG (1U)
+#define APP_MODE APP_MODE_OPEN_LOOP_LOG
+
+static void Log_OpenLoopData(uint32_t t_ms, uint8_t test_id, int pwm_cmd)
 {
-    if ((byte == '\r') || (byte == '\n') ||
-        ((byte >= 0x20U) && (byte <= 0x7EU)))
+    Bluetooth_Printf("%lu,OL,%u,%d,%d,%d,%ld,%ld\r\n",
+                     (unsigned long)t_ms,
+                     (unsigned int)test_id,
+                     pwm_cmd,
+                     (int)Encoder_GetLeftSpeed(),
+                     (int)Encoder_GetRightSpeed(),
+                     (long)Encoder_GetLeftCount(),
+                     (long)Encoder_GetRightCount());
+}
+
+static void OpenLoop_LogTest_OnePWM(void)
+{
+    const int pwm = 300;
+    const uint8_t test_id = 1U;
+    uint32_t t_ms = 0U;
+    uint32_t print_ms = 0U;
+
+    Bluetooth_SendString("t_ms,mode,test_id,pwm_cmd,left_speed,right_speed,left_count,right_count\r\n");
+
+    Encoder_ClearCount();
+    move(pwm, pwm);
+
+    while (t_ms <= 2000U)
     {
-        printf("%c", (char)byte);
+        delay_ms(20);
+        t_ms += 20U;
+        print_ms += 20U;
+
+        if (print_ms >= 100U)
+        {
+            print_ms = 0U;
+            Log_OpenLoopData(t_ms, test_id, pwm);
+        }
     }
-    else
+
+    move(0, 0);
+
+    while (1)
     {
-        printf("<%02X>", (unsigned int)byte);
+        Bluetooth_SendString("MARK,OL_DONE,1,300\r\n");
+        delay_ms(1000);
     }
 }
 
 int main(void)
 {
-    uint8_t byte;
-
     board_init();
+    Motor_Init();
+    Encoder_Init();
     Bluetooth_Init();
 
-    printf("\r\nHC-06D Bluetooth test start\r\n");
-    printf("UART2: PA21(TX), PA22(RX), 9600 baud, 8-N-1\r\n");
-    printf("Send text from the phone. Received data is echoed back.\r\n\r\n");
-
-    Bluetooth_SendString("MSPM0 Bluetooth ready\r\n");
-
+#if APP_MODE == APP_MODE_OPEN_LOOP_LOG
+    OpenLoop_LogTest_OnePWM();
+#else
     while (1)
     {
-        while (Bluetooth_ReadByte(&byte))
-        {
-            PrintReceivedByte(byte);
-            Bluetooth_SendByte(byte);
-        }
+        delay_ms(1000);
     }
+#endif
 }
