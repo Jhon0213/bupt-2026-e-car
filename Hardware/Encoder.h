@@ -5,10 +5,10 @@
 #include "stdlib.h"
 #include <stdint.h>
  
-#define MOTOR_SPEED_RERATIO 28    //????????
-#define PULSE_PRE_ROUND 13       //????????
-#define ENCODER_MULTIPLE 1.0     //?????????
-#define PULSE_PER_CYCLE  (MOTOR_SPEED_RERATIO*PULSE_PRE_ROUND*ENCODER_MULTIPLE)//????????
+#define MOTOR_SPEED_RERATIO 28.0f   /* MG513X gearbox ratio: 1:28 */
+#define PULSE_PRE_ROUND 500.0f      /* GMR encoder: 500 PPR */
+#define ENCODER_MULTIPLE 1.0f       /* A-phase capture, B-phase direction */
+#define PULSE_PER_CYCLE  (MOTOR_SPEED_RERATIO * PULSE_PRE_ROUND * ENCODER_MULTIPLE)
 #define RADIUS_OF_TYRE 3.3  //??????? cm
 #define LINE_SPEED_C  RADIUS_OF_TYRE * 2 * 3.14  //??????? cm
 #define SPEED_RECORD_NUM 20  //?????????????????

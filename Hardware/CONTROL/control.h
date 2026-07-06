@@ -6,7 +6,7 @@
 #include "Motor.h" 
 #include "Encoder.h"
 
-// === È«¾Ö±äÁ¿ÉùÃ÷£¨×¢ÒâÊÇ extern£© ===
+// === È«ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½ï¿½ externï¿½ï¿½ ===
 extern float bias, bias_last;
 extern float Initial_yaw;
 extern float Kp_angle, Ki_angle;
@@ -14,11 +14,9 @@ extern float Kp_gyro, Ki_gyro, Kd_gyro;
 extern float angle_error, angle_sum,last_angle_error;
 extern float gyro_error, gyro_sum,last_gyro_error;
 
-// === º¯ÊýÉùÃ÷ ===
+// === ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ===
 void yaw_control_with_gyro(float base_speed, float target_yaw);
 float limit(float val, float min_val, float max_val);
 
-float Speed_Loop_Left(float target_speed);
-float Speed_Loop_Right(float target_speed);
-void Speed_Control(float target_left, float target_right);
+
 #endif

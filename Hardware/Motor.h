@@ -3,5 +3,7 @@
 
 #include "ti_msp_dl_config.h"
 void Motor_Init(void);
+void Motor_Coast(void);
+void Motor_Brake(void);
 void move(int left,int right);
 #endif

@@ -1,13 +1,18 @@
-#include "ti_msp_dl_config.h"
-
+#include "Application/RobotPlatform.h"
+#include "Application/Task1_AutoTrace.h"
+#include "Hardware/Motor.h"
 #include "Public/Board/board.h"
 
 int main(void)
 {
-    board_init();
+    RobotPlatform_Init();
+
+    /* Future key/serial mode selection belongs here. */
+    Task1_AutoTrace_Run();
 
     while (1)
     {
-        delay_ms(1000);
+        Motor_Coast();
+        delay_ms(100U);
     }
 }

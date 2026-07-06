@@ -417,6 +417,31 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>Application</GroupName>
+          <Files>
+            <File>
+              <FileName>RobotPlatform.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\RobotPlatform.c</FilePath>
+            </File>
+            <File>
+              <FileName>RobotPlatform.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\RobotPlatform.h</FilePath>
+            </File>
+            <File>
+              <FileName>Task1_AutoTrace.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\Task1_AutoTrace.c</FilePath>
+            </File>
+            <File>
+              <FileName>Task1_AutoTrace.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\Task1_AutoTrace.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>Hardware</GroupName>
           <Files>
             <File>
@@ -438,6 +463,31 @@
               <FileName>Gray.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hardware\Gray.c</FilePath>
+            </File>
+            <File>
+              <FileName>Bluetooth.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Hardware/Bluetooth.c</FilePath>
+            </File>
+            <File>
+              <FileName>SpeedPI.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Hardware/CONTROL/SpeedPI.c</FilePath>
+            </File>
+            <File>
+              <FileName>GrayTrack.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Hardware/CONTROL/GrayTrack.c</FilePath>
+            </File>
+            <File>
+              <FileName>HeadingControl.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../Hardware/CONTROL/HeadingControl.c</FilePath>
+            </File>
+            <File>
+              <FileName>boot_config.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>../boot_config.c</FilePath>
             </File>
             <File>
               <FileName>control.c</FileName>
