@@ -18,9 +18,15 @@ typedef struct
 void HeadingControl_Init(void);
 void HeadingControl_Reset(float actual_yaw_deg);
 void HeadingControl_SetGains(float kp, float ki, float kd);
+void HeadingControl_SetOutputLimits(float correction_limit_rpm,
+                                    float target_min_rpm,
+                                    float target_max_rpm);
 void HeadingControl_SetTarget(float target_yaw_deg, float base_rpm);
 void HeadingControl_SetBaseRPM(float base_rpm);
 void HeadingControl_Update(float actual_yaw_deg);
 void HeadingControl_GetOutput(HeadingControl_Output *output);
+float HeadingControl_GetCorrectionLimitRPM(void);
+float HeadingControl_GetTargetMinRPM(void);
+float HeadingControl_GetTargetMaxRPM(void);
 
 #endif

@@ -2,12 +2,12 @@
 
 #include "Hardware/Gray.h"
 
-#define GRAY_BASE_RPM          120.0f
-#define GRAY_KP_RPM            7.0f
+#define GRAY_BASE_RPM           80.0f
+#define GRAY_KP_RPM             4.0f
 #define GRAY_KD_RPM            0.0f
-#define GRAY_CORRECTION_MAX     50.0f
-#define GRAY_TARGET_MIN         60.0f
-#define GRAY_TARGET_MAX        180.0f
+#define GRAY_CORRECTION_MAX     30.0f
+#define GRAY_TARGET_MIN         50.0f
+#define GRAY_TARGET_MAX        115.0f
 #define GRAY_LOST_CONFIRM_COUNT 3U
 
 static uint8_t g_raw;
@@ -151,6 +151,12 @@ uint8_t GrayTrack_IsLostConfirmed(void) { return g_lost_confirmed; }
 float GrayTrack_GetCorrectionRPM(void) { return g_correction_rpm; }
 float GrayTrack_GetLeftTargetRPM(void) { return g_left_target_rpm; }
 float GrayTrack_GetRightTargetRPM(void) { return g_right_target_rpm; }
+float GrayTrack_GetBaseRPM(void) { return GRAY_BASE_RPM; }
+float GrayTrack_GetKpRPM(void) { return GRAY_KP_RPM; }
+float GrayTrack_GetKdRPM(void) { return GRAY_KD_RPM; }
+float GrayTrack_GetCorrectionMaxRPM(void) { return GRAY_CORRECTION_MAX; }
+float GrayTrack_GetTargetMinRPM(void) { return GRAY_TARGET_MIN; }
+float GrayTrack_GetTargetMaxRPM(void) { return GRAY_TARGET_MAX; }
 
 void GrayTrack_GetOutput(GrayTrack_Output *output)
 {

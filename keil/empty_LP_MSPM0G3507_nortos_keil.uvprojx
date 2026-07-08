@@ -430,6 +430,36 @@
               <FilePath>..\Application\RobotPlatform.h</FilePath>
             </File>
             <File>
+              <FileName>RouteNavigator.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\RouteNavigator.c</FilePath>
+            </File>
+            <File>
+              <FileName>RouteNavigator.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\RouteNavigator.h</FilePath>
+            </File>
+            <File>
+              <FileName>StatusSignal.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\StatusSignal.c</FilePath>
+            </File>
+            <File>
+              <FileName>StatusSignal.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\StatusSignal.h</FilePath>
+            </File>
+            <File>
+              <FileName>Task3_LinkedOperation.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\Task3_LinkedOperation.c</FilePath>
+            </File>
+            <File>
+              <FileName>Task3_LinkedOperation.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\Task3_LinkedOperation.h</FilePath>
+            </File>
+            <File>
               <FileName>Task1_AutoTrace.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Application\Task1_AutoTrace.c</FilePath>
@@ -438,6 +468,26 @@
               <FileName>Task1_AutoTrace.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Application\Task1_AutoTrace.h</FilePath>
+            </File>
+            <File>
+              <FileName>TaskBonusFourLap.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\TaskBonusFourLap.c</FilePath>
+            </File>
+            <File>
+              <FileName>TaskBonusFourLap.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\TaskBonusFourLap.h</FilePath>
+            </File>
+            <File>
+              <FileName>TaskBonus1_LaserTrace.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\TaskBonus1_LaserTrace.c</FilePath>
+            </File>
+            <File>
+              <FileName>TaskBonus1_LaserTrace.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\TaskBonus1_LaserTrace.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -463,6 +513,26 @@
               <FileName>Gray.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hardware\Gray.c</FilePath>
+            </File>
+            <File>
+              <FileName>Buzzer.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\Buzzer.c</FilePath>
+            </File>
+            <File>
+              <FileName>Buzzer.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Hardware\Buzzer.h</FilePath>
+            </File>
+            <File>
+              <FileName>LaserRelay.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\LaserRelay.c</FilePath>
+            </File>
+            <File>
+              <FileName>LaserRelay.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Hardware\LaserRelay.h</FilePath>
             </File>
             <File>
               <FileName>Bluetooth.c</FileName>

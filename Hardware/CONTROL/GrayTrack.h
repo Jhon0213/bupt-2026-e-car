@@ -28,5 +28,11 @@ uint8_t GrayTrack_IsLostConfirmed(void);
 float GrayTrack_GetCorrectionRPM(void);
 float GrayTrack_GetLeftTargetRPM(void);
 float GrayTrack_GetRightTargetRPM(void);
+float GrayTrack_GetBaseRPM(void);
+float GrayTrack_GetKpRPM(void);
+float GrayTrack_GetKdRPM(void);
+float GrayTrack_GetCorrectionMaxRPM(void);
+float GrayTrack_GetTargetMinRPM(void);
+float GrayTrack_GetTargetMaxRPM(void);
 
 #endif

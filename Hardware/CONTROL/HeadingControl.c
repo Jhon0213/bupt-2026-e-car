@@ -4,14 +4,17 @@
 #define HEADING_KI_DEFAULT             0.0f
 #define HEADING_KD_DEFAULT             0.0f
 #define HEADING_INTEGRAL_LIMIT       100.0f
-#define HEADING_CORRECTION_LIMIT_RPM  60.0f
-#define HEADING_TARGET_MIN_RPM         0.0f
-#define HEADING_TARGET_MAX_RPM       180.0f
+#define HEADING_CORRECTION_LIMIT_DEFAULT_RPM  60.0f
+#define HEADING_TARGET_MIN_DEFAULT_RPM         0.0f
+#define HEADING_TARGET_MAX_DEFAULT_RPM       180.0f
 
 static float g_kp;
 static float g_ki;
 static float g_kd;
 static float g_last_error;
+static float g_correction_limit_rpm;
+static float g_target_min_rpm;
+static float g_target_max_rpm;
 static HeadingControl_Output g_output;
 
 static float Clamp(float value, float minimum, float maximum)
@@ -25,12 +28,12 @@ static void UpdateTargets(void)
 {
     g_output.left_target_rpm =
         Clamp(g_output.base_rpm + g_output.correction_rpm,
-              HEADING_TARGET_MIN_RPM,
-              HEADING_TARGET_MAX_RPM);
+              g_target_min_rpm,
+              g_target_max_rpm);
     g_output.right_target_rpm =
         Clamp(g_output.base_rpm - g_output.correction_rpm,
-              HEADING_TARGET_MIN_RPM,
-              HEADING_TARGET_MAX_RPM);
+              g_target_min_rpm,
+              g_target_max_rpm);
 }
 
 void HeadingControl_Init(void)
@@ -38,6 +41,9 @@ void HeadingControl_Init(void)
     g_kp = HEADING_KP_DEFAULT;
     g_ki = HEADING_KI_DEFAULT;
     g_kd = HEADING_KD_DEFAULT;
+    g_correction_limit_rpm = HEADING_CORRECTION_LIMIT_DEFAULT_RPM;
+    g_target_min_rpm = HEADING_TARGET_MIN_DEFAULT_RPM;
+    g_target_max_rpm = HEADING_TARGET_MAX_DEFAULT_RPM;
     g_output.target_yaw_deg = 0.0f;
     g_output.base_rpm = 0.0f;
     HeadingControl_Reset(0.0f);
@@ -59,6 +65,25 @@ void HeadingControl_SetGains(float kp, float ki, float kd)
     g_kp = kp;
     g_ki = ki;
     g_kd = kd;
+}
+
+void HeadingControl_SetOutputLimits(float correction_limit_rpm,
+                                    float target_min_rpm,
+                                    float target_max_rpm)
+{
+    if (correction_limit_rpm < 0.0f)
+        correction_limit_rpm = -correction_limit_rpm;
+    if (target_max_rpm < target_min_rpm)
+        target_max_rpm = target_min_rpm;
+
+    g_correction_limit_rpm = correction_limit_rpm;
+    g_target_min_rpm = target_min_rpm;
+    g_target_max_rpm = target_max_rpm;
+    g_output.correction_rpm =
+        Clamp(g_output.correction_rpm,
+              -g_correction_limit_rpm,
+              g_correction_limit_rpm);
+    UpdateTargets();
 }
 
 void HeadingControl_SetTarget(float target_yaw_deg, float base_rpm)
@@ -91,8 +116,8 @@ void HeadingControl_Update(float actual_yaw_deg)
                + g_kd * g_output.error_derivative;
     g_output.correction_rpm =
         Clamp(pid_output,
-              -HEADING_CORRECTION_LIMIT_RPM,
-              HEADING_CORRECTION_LIMIT_RPM);
+              -g_correction_limit_rpm,
+              g_correction_limit_rpm);
 
     g_last_error = g_output.error_deg;
     UpdateTargets();
@@ -104,4 +129,18 @@ void HeadingControl_GetOutput(HeadingControl_Output *output)
     {
         *output = g_output;
     }
+}
+float HeadingControl_GetCorrectionLimitRPM(void)
+{
+    return g_correction_limit_rpm;
+}
+
+float HeadingControl_GetTargetMinRPM(void)
+{
+    return g_target_min_rpm;
+}
+
+float HeadingControl_GetTargetMaxRPM(void)
+{
+    return g_target_max_rpm;
 }
