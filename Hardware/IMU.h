@@ -28,5 +28,6 @@ float Yaw(void);
 void IMU_ZeroYaw(void);
 void IMU_StartBiasCalibration(void);
 void IMU_SaveConfiguration(void);
+void IMU_SetOutputRate100Hz(void);
 
 #endif

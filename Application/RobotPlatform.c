@@ -10,6 +10,7 @@
 #include "Hardware/IMU.h"
 #include "Hardware/LaserRelay.h"
 #include "Hardware/Motor.h"
+#include "Hardware/TrackZone.h"
 #include "Public/Board/board.h"
 
 void RobotPlatform_Init(void)
@@ -17,6 +18,7 @@ void RobotPlatform_Init(void)
     board_init();
     Buzzer_Init();
     LaserRelay_Init();
+    TrackZone_Init();
     StatusSignal_Init();
     Bluetooth_Init();
     Motor_Init();
@@ -26,5 +28,6 @@ void RobotPlatform_Init(void)
     HeadingControl_Init();
     IMU_Init();
     (void)IMU_SetHostBaudRate(115200U);
+    IMU_SetOutputRate100Hz();
     Motor_Coast();
 }

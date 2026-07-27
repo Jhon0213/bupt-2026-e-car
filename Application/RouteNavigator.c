@@ -9,6 +9,7 @@
 #include "Hardware/Encoder.h"
 #include "Hardware/IMU.h"
 #include "Hardware/Motor.h"
+#include "Hardware/TrackZone.h"
 #include "Public/Board/board.h"
 
 #define CONTROL_MS                    ROUTE_NAVIGATOR_CONTROL_MS
@@ -99,6 +100,34 @@ enum
     STOP_CAPTURE_TIMEOUT = 5,
     STOP_ALIGN_TIMEOUT = 7
 };
+
+static uint8_t TrackZoneForState(uint8_t route_state)
+{
+    switch (route_state)
+    {
+        case STATE_CAPTURE_B:
+        case STATE_GRAY_BC:
+        case STATE_ADVANCE_C:
+            return TRACK_ZONE_BC;
+
+        case STATE_BRAKE_C:
+        case STATE_ALIGN_C:
+        case STATE_HEADING_CD:
+            return TRACK_ZONE_CD;
+
+        case STATE_CAPTURE_D:
+        case STATE_GRAY_DA:
+        case STATE_ADVANCE_A:
+            return TRACK_ZONE_DA;
+
+        case STATE_BRAKE_A:
+        case STATE_ALIGN_A:
+        case STATE_WAIT_IMU:
+        case STATE_HEADING_AB:
+        default:
+            return TRACK_ZONE_AB;
+    }
+}
 
 enum
 {
@@ -548,6 +577,8 @@ void RouteNavigator_LogSessionSelectLap(uint8_t lap, uint8_t detailed)
 }
 void RouteNavigator_Start(void)
 {
+    TrackZone_Set(TRACK_ZONE_AB);
+
     if (log_session_active == 0U)
     {
         log_count = 0U;
@@ -1148,6 +1179,9 @@ __attribute__((optnone)) void RouteNavigator_Update(void)
                         &gray, &heading, left_command, right_command);
                 next_log_ms += LOG_MS;
             }
+    /* Repeat the stable two-bit road-segment code every 10 ms. */
+    TrackZone_Set(TrackZoneForState(state));
+
     if ((reason == 0U) && (ms >= ROUTE_TIMEOUT_MS))
     {
         reason = STOP_ROUTE_TIMEOUT;

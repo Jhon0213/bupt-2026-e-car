@@ -14,6 +14,7 @@ static uint8_t g_rx_index;
 static const uint8_t g_cmd_unlock[5] = {0x55U, 0xAAU, 0x13U, 0x8EU, 0x5FU};
 static const uint8_t g_cmd_yaw_zero[5] = {0x55U, 0xAAU, 0x15U, 0x00U, 0x00U};
 static const uint8_t g_cmd_bias_calibration[5] = {0x55U, 0xAAU, 0x0AU, 0x01U, 0x00U};
+static const uint8_t g_cmd_rate_100hz[5] = {0x55U, 0xAAU, 0x02U, 0x09U, 0x00U};
 static const uint8_t g_cmd_save[5] = {0x55U, 0xAAU, 0x00U, 0x00U, 0x00U};
 
 static void IMU_SendBytes(const uint8_t *data, uint32_t length)
@@ -212,6 +213,15 @@ void IMU_SaveConfiguration(void)
     IMU_SendBytes(g_cmd_save, sizeof(g_cmd_save));
 }
 
+void IMU_SetOutputRate100Hz(void)
+{
+    IMU_SendBytes(g_cmd_unlock, sizeof(g_cmd_unlock));
+    IMU_DelayMs(100U);
+    IMU_SendBytes(g_cmd_rate_100hz, sizeof(g_cmd_rate_100hz));
+    IMU_DelayMs(100U);
+    IMU_SendBytes(g_cmd_save, sizeof(g_cmd_save));
+    IMU_DelayMs(100U);
+}
 void UART_1_INST_IRQHandler(void)
 {
     switch (DL_UART_getPendingInterrupt(UART_1_INST))

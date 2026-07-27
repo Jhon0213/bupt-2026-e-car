@@ -1,4 +1,3 @@
-
 #ifndef __BOARD_H__
 #define __BOARD_H__
 
@@ -24,17 +23,21 @@
 void board_init(void);
 void uart0_init(void);
 void uart0_send_char(char ch);
-void uart0_send_string(char* str);
+void uart0_send_string(char *str);
 int fputc(int ch, FILE *f);
-/* 延时函数 */
 void delay_us(int __us);
 void delay_ms(int __ms);
-
 void delay_1us(int __us);
 void delay_1ms(int __ms);
+uint32_t board_millis(void);
+void board_time_advance_ms(uint32_t elapsed_ms);
+void board_control_tick_notify(void);
+uint8_t board_consume_control_tick(void);
+uint32_t board_pending_control_ticks(void);
+void board_clear_control_ticks(void);
 
 /* Legacy control interface. Implemented by Hardware/IMU.c. */
 float GyroZ(void);
 float Yaw(void);
-	
+
 #endif

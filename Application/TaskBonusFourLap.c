@@ -4,6 +4,7 @@
 #include "Application/StatusSignal.h"
 #include "Hardware/LaserRelay.h"
 #include "Hardware/Motor.h"
+#include "Hardware/TrackZone.h"
 
 #define TASK_BONUS_FOUR_LAP_COUNT           4U
 #define TASK_BONUS_FOUR_LAP_FINAL_BRAKE_MS 300U
@@ -20,9 +21,12 @@ static TaskBonusFourLap_State task_state;
 static TaskBonusFourLap_Result task_result;
 static uint32_t stopped_ms;
 static uint8_t current_lap;
+static uint8_t current_zone;
 
 static void StartCurrentLap(void)
 {
+    current_zone = TRACK_ZONE_AB;
+    TrackZone_Set(current_zone);
     RouteNavigator_SetContinuationRequired(
         (current_lap < TASK_BONUS_FOUR_LAP_COUNT) ? 1U : 0U);
     RouteNavigator_LogSessionSelectLap(
@@ -34,6 +38,8 @@ static void StartCurrentLap(void)
 static void BeginFinalBrake(TaskBonusFourLap_Result result)
 {
     LaserRelay_Off();
+    current_zone = TRACK_ZONE_AB;
+    TrackZone_Set(current_zone);
     task_result = result;
     stopped_ms = 0U;
     Motor_Brake();
@@ -49,10 +55,12 @@ void TaskBonusFourLap_Start(void)
     }
 
     current_lap = 1U;
+    current_zone = TRACK_ZONE_AB;
     stopped_ms = 0U;
     task_result = TASK_BONUS_FOUR_LAP_RESULT_NONE;
 
     LaserRelay_Off();
+    TrackZone_Set(current_zone);
     LaserRelay_On();
     RouteNavigator_LogSessionBegin();
     StartCurrentLap();
@@ -68,19 +76,29 @@ void TaskBonusFourLap_Update(void)
         RouteNavigator_Update();
         events = RouteNavigator_ConsumeEvents();
 
+        if ((events & ROUTE_EVENT_REACHED_B) != 0U)
+            current_zone = TRACK_ZONE_BC;
+        else if ((events & ROUTE_EVENT_REACHED_C) != 0U)
+            current_zone = TRACK_ZONE_CD;
+        else if ((events & ROUTE_EVENT_REACHED_D) != 0U)
+            current_zone = TRACK_ZONE_DA;
+
         if ((events & ROUTE_EVENT_ERROR) != 0U)
         {
+            current_zone = TRACK_ZONE_AB;
             LaserRelay_Off();
             StatusSignal_RequestError();
         }
         else if ((events & ROUTE_EVENT_LAP_COMPLETE) != 0U)
         {
+            current_zone = TRACK_ZONE_AB;
             if (current_lap == TASK_BONUS_FOUR_LAP_COUNT)
                 StatusSignal_RequestFinish();
             else
                 StatusSignal_RequestKeyPoint();
         }
 
+        TrackZone_Set(current_zone);
         StatusSignal_Update(TASK_BONUS_FOUR_LAP_UPDATE_MS);
 
         if (RouteNavigator_IsFinished() != 0U)
@@ -106,6 +124,8 @@ void TaskBonusFourLap_Update(void)
     else if (task_state == TASK_BONUS_FOUR_LAP_STATE_FINAL_BRAKE)
     {
         LaserRelay_Off();
+        current_zone = TRACK_ZONE_AB;
+        TrackZone_Set(current_zone);
         Motor_Brake();
         StatusSignal_Update(TASK_BONUS_FOUR_LAP_UPDATE_MS);
         stopped_ms += TASK_BONUS_FOUR_LAP_UPDATE_MS;
@@ -127,6 +147,8 @@ void TaskBonusFourLap_Abort(void)
     {
         RouteNavigator_Abort();
         (void)RouteNavigator_ConsumeEvents();
+        current_zone = TRACK_ZONE_AB;
+        TrackZone_Set(current_zone);
         StatusSignal_RequestError();
         BeginFinalBrake(TASK_BONUS_FOUR_LAP_RESULT_ABORTED);
     }

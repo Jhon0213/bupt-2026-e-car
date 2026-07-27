@@ -535,6 +535,16 @@
               <FilePath>..\Hardware\LaserRelay.h</FilePath>
             </File>
             <File>
+              <FileName>TrackZone.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\TrackZone.c</FilePath>
+            </File>
+            <File>
+              <FileName>TrackZone.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Hardware\TrackZone.h</FilePath>
+            </File>
+            <File>
               <FileName>Bluetooth.c</FileName>
               <FileType>1</FileType>
               <FilePath>../Hardware/Bluetooth.c</FilePath>
