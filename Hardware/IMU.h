@@ -4,17 +4,35 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#define IMU_MODULE_LEGACY 1U
+#define IMU_MODULE_AXIS6  2U
+
+#define IMU_SELECTED_MODULE IMU_MODULE_AXIS6
+
 typedef struct
 {
-    float gyro_z_dps;
-    float yaw_deg;
+    int16_t gyro_x_raw;
+    int16_t gyro_y_raw;
+    int16_t gyro_z_raw;
+    int16_t accel_x_raw;
+    int16_t accel_y_raw;
+    int16_t accel_z_raw;
+    int16_t roll_raw;
+    int16_t pitch_raw;
+    int16_t yaw_raw;
+    int16_t quat_q0_raw;
+    int16_t quat_q1_raw;
+    int16_t quat_q2_raw;
+    int16_t quat_q3_raw;
     uint32_t gyro_frame_count;
+    uint32_t accel_frame_count;
     uint32_t yaw_frame_count;
+    uint32_t quaternion_frame_count;
     uint32_t checksum_error_count;
     uint32_t rx_byte_count;
 } IMU_Data;
 
-/* UART1: PA17 = TX, PA18 = RX, 9600 baud. */
+/* UART1: PB4 = TX, PB5 = RX; baud rate follows IMU_SELECTED_MODULE. */
 void IMU_Init(void);
 void IMU_GetData(IMU_Data *data);
 bool IMU_IsReceiving(void);

@@ -1,7 +1,7 @@
 #include "Application/RobotPlatform.h"
 #include "Application/StatusSignal.h"
 
-#include "Hardware/Bluetooth.h"
+#include "Hardware/StarFlash.h"
 #include "Hardware/Buzzer.h"
 #include "Hardware/CONTROL/GrayTrack.h"
 #include "Hardware/CONTROL/HeadingControl.h"
@@ -20,14 +20,12 @@ void RobotPlatform_Init(void)
     LaserRelay_Init();
     TrackZone_Init();
     StatusSignal_Init();
-    Bluetooth_Init();
+    StarFlash_Init();
     Motor_Init();
     Encoder_Init();
     GrayTrack_Init();
     SpeedPI_Init();
     HeadingControl_Init();
     IMU_Init();
-    (void)IMU_SetHostBaudRate(115200U);
-    IMU_SetOutputRate100Hz();
     Motor_Coast();
 }

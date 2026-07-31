@@ -1,17 +1,17 @@
-#include "Bluetooth.h"
+#include "StarFlash.h"
 
 #include "ti_msp_dl_config.h"
 
-#define BLUETOOTH_RX_BUFFER_SIZE (128U)
-#define BLUETOOTH_RX_BUFFER_MASK (BLUETOOTH_RX_BUFFER_SIZE - 1U)
+#define STARFLASH_RX_BUFFER_SIZE (128U)
+#define STARFLASH_RX_BUFFER_MASK (STARFLASH_RX_BUFFER_SIZE - 1U)
 
-static volatile uint8_t g_rx_buffer[BLUETOOTH_RX_BUFFER_SIZE];
+static volatile uint8_t g_rx_buffer[STARFLASH_RX_BUFFER_SIZE];
 static volatile uint16_t g_rx_head;
 static volatile uint16_t g_rx_tail;
 static volatile uint32_t g_received_count;
 static volatile uint32_t g_overflow_count;
 
-void Bluetooth_Init(void)
+void StarFlash_Init(void)
 {
     g_rx_head = 0U;
     g_rx_tail = 0U;
@@ -23,7 +23,7 @@ void Bluetooth_Init(void)
     NVIC_EnableIRQ(UART_2_INST_INT_IRQN);
 }
 
-bool Bluetooth_ReadByte(uint8_t *byte)
+bool StarFlash_ReadByte(uint8_t *byte)
 {
     uint16_t tail;
 
@@ -34,11 +34,11 @@ bool Bluetooth_ReadByte(uint8_t *byte)
 
     tail = g_rx_tail;
     *byte = g_rx_buffer[tail];
-    g_rx_tail = (uint16_t)((tail + 1U) & BLUETOOTH_RX_BUFFER_MASK);
+    g_rx_tail = (uint16_t)((tail + 1U) & STARFLASH_RX_BUFFER_MASK);
     return true;
 }
 
-void Bluetooth_SendByte(uint8_t byte)
+void StarFlash_SendByte(uint8_t byte)
 {
     while (DL_UART_isBusy(UART_2_INST))
     {
@@ -46,7 +46,7 @@ void Bluetooth_SendByte(uint8_t byte)
     DL_UART_Main_transmitData(UART_2_INST, byte);
 }
 
-void Bluetooth_SendString(const char *text)
+void StarFlash_SendString(const char *text)
 {
     if (text == 0)
     {
@@ -55,16 +55,16 @@ void Bluetooth_SendString(const char *text)
 
     while (*text != '\0')
     {
-        Bluetooth_SendByte((uint8_t)*text++);
+        StarFlash_SendByte((uint8_t)*text++);
     }
 }
 
-uint32_t Bluetooth_GetReceivedCount(void)
+uint32_t StarFlash_GetReceivedCount(void)
 {
     return g_received_count;
 }
 
-uint32_t Bluetooth_GetOverflowCount(void)
+uint32_t StarFlash_GetOverflowCount(void)
 {
     return g_overflow_count;
 }
@@ -80,7 +80,7 @@ void UART_2_INST_IRQHandler(void)
             byte = (uint8_t)DL_UART_Main_receiveData(UART_2_INST);
             g_received_count++;
             next_head = (uint16_t)((g_rx_head + 1U) &
-                                   BLUETOOTH_RX_BUFFER_MASK);
+                                   STARFLASH_RX_BUFFER_MASK);
 
             if (next_head == g_rx_tail)
             {

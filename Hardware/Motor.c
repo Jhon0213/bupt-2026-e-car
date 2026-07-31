@@ -4,12 +4,12 @@
 
 void Motor_Init(void)
 {
-	/* AIN/BIN 驱动板正转测试版本
-	 * PA15 -> AIN2，对应 left PWM
-	 * PA27 -> AIN1，当前固定低电平
-	 * PA9  -> BIN1，对应 right PWM
-	 * PA25 -> BIN2，当前固定低电平
-	 * 当前仅验证正转，暂不支持真正反转逻辑。
+	/* AIN/BIN ??????????
+	 * PA15 -> AIN2????left PWM
+	 * PA27 -> AIN1????????
+	 * PA9  -> BIN1????right PWM
+	 * PA25 -> BIN2????????
+	 * ????????????????????
 	 */
 	DL_GPIO_clearPins(Motor2_PORT, Motor2_M2PIN_27_PIN);
 	DL_GPIO_clearPins(Motor1_PORT, Motor1_M1PIN_25_PIN);
@@ -30,13 +30,9 @@ void Motor_Coast(void)
 
 void Motor_Brake(void)
 {
-    /* AT8236: IN1=1, IN2=1 -> both low-side MOSFETs on (brake).
-     * With the configured timer polarity, compare=period keeps each PWM
-     * input high. PA27/PA15 and PA25/PA9 therefore both become high. */
-    DL_GPIO_setPins(Motor2_PORT, Motor2_M2PIN_27_PIN);
-    DL_GPIO_setPins(Motor1_PORT, Motor1_M1PIN_25_PIN);
-    DL_TimerA_setCaptureCompareValue(MotorPWM_INST, MOTOR_PWM_MAX, GPIO_MotorPWM_C2_IDX);
-    DL_TimerA_setCaptureCompareValue(MotorPWM_INST, MOTOR_PWM_MAX, GPIO_MotorPWM_C1_IDX);
+    /* Safe stop for the current complementary PWM wiring.
+     * The old brake state could drive a wheel when PWM polarity is inverted. */
+    Motor_Coast();
 }
 void move(int left, int right)
 {

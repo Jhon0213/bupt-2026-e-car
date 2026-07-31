@@ -2,19 +2,35 @@
 
 #include "ti_msp_dl_config.h"
 
-#define IMU_FRAME_HEADER          (0x5AU)
-#define IMU_FRAME_GYRO_Z          (0xAAU)
-#define IMU_FRAME_YAW             (0xBBU)
-#define IMU_FRAME_SIZE            (5U)
+#if IMU_SELECTED_MODULE == IMU_MODULE_LEGACY
+#define IMU_FRAME_HEADER          0x5AU
+#define IMU_FRAME_GYRO_Z          0xAAU
+#define IMU_FRAME_YAW             0xBBU
+#define IMU_FRAME_SIZE            5U
+#elif IMU_SELECTED_MODULE == IMU_MODULE_AXIS6
+#define IMU_FRAME_HEADER          0x5AU
+#define IMU_FRAME_GYRO_Z          0xAAU
+#define IMU_FRAME_YAW             0xBBU
+#define IMU_FRAME_ACCEL           0xCCU
+#define IMU_FRAME_QUATERNION      0xDDU
+#define IMU_FRAME_REGISTER        0xEEU
+#define IMU_FRAME_SIZE            11U
+#else
+#error "Unsupported IMU_SELECTED_MODULE"
+#endif
 
 static volatile IMU_Data g_imu_data;
 static uint8_t g_rx_frame[IMU_FRAME_SIZE];
 static uint8_t g_rx_index;
 
 static const uint8_t g_cmd_unlock[5] = {0x55U, 0xAAU, 0x13U, 0x8EU, 0x5FU};
+#if IMU_SELECTED_MODULE == IMU_MODULE_LEGACY
 static const uint8_t g_cmd_yaw_zero[5] = {0x55U, 0xAAU, 0x15U, 0x00U, 0x00U};
-static const uint8_t g_cmd_bias_calibration[5] = {0x55U, 0xAAU, 0x0AU, 0x01U, 0x00U};
 static const uint8_t g_cmd_rate_100hz[5] = {0x55U, 0xAAU, 0x02U, 0x09U, 0x00U};
+#else
+static const uint8_t g_cmd_yaw_zero[5] = {0x55U, 0xAAU, 0x0AU, 0x04U, 0x00U};
+#endif
+static const uint8_t g_cmd_bias_calibration[5] = {0x55U, 0xAAU, 0x0AU, 0x01U, 0x00U};
 static const uint8_t g_cmd_save[5] = {0x55U, 0xAAU, 0x00U, 0x00U, 0x00U};
 
 static void IMU_SendBytes(const uint8_t *data, uint32_t length)
@@ -39,6 +55,7 @@ static void IMU_DelayMs(uint32_t milliseconds)
     }
 }
 
+#if IMU_SELECTED_MODULE == IMU_MODULE_LEGACY
 static void IMU_ParseByte(uint8_t byte)
 {
     uint8_t checksum;
@@ -48,8 +65,7 @@ static void IMU_ParseByte(uint8_t byte)
     {
         if (byte == IMU_FRAME_HEADER)
         {
-            g_rx_frame[0] = byte;
-            g_rx_index = 1U;
+            g_rx_frame[g_rx_index++] = byte;
         }
         return;
     }
@@ -58,16 +74,11 @@ static void IMU_ParseByte(uint8_t byte)
     {
         if ((byte == IMU_FRAME_GYRO_Z) || (byte == IMU_FRAME_YAW))
         {
-            g_rx_frame[1] = byte;
-            g_rx_index = 2U;
-        }
-        else if (byte == IMU_FRAME_HEADER)
-        {
-            g_rx_frame[0] = byte;
+            g_rx_frame[g_rx_index++] = byte;
         }
         else
         {
-            g_rx_index = 0U;
+            g_rx_index = (byte == IMU_FRAME_HEADER) ? 1U : 0U;
         }
         return;
     }
@@ -80,20 +91,17 @@ static void IMU_ParseByte(uint8_t byte)
 
     checksum = (uint8_t)(g_rx_frame[0] + g_rx_frame[1] +
                          g_rx_frame[2] + g_rx_frame[3]);
-
     if (checksum == g_rx_frame[4])
     {
-        raw = (int16_t)(((uint16_t)g_rx_frame[3] << 8) |
-                        (uint16_t)g_rx_frame[2]);
-
+        raw = (int16_t)(((uint16_t)g_rx_frame[3] << 8) | g_rx_frame[2]);
         if (g_rx_frame[1] == IMU_FRAME_GYRO_Z)
         {
-            g_imu_data.gyro_z_dps = ((float)raw * 2000.0f) / 32768.0f;
+            g_imu_data.gyro_z_raw = raw;
             g_imu_data.gyro_frame_count++;
         }
         else
         {
-            g_imu_data.yaw_deg = ((float)raw * 180.0f) / 32768.0f;
+            g_imu_data.yaw_raw = raw;
             g_imu_data.yaw_frame_count++;
         }
     }
@@ -101,20 +109,115 @@ static void IMU_ParseByte(uint8_t byte)
     {
         g_imu_data.checksum_error_count++;
     }
-
     g_rx_index = 0U;
 }
+#else
+static int16_t IMU_ReadS16(uint32_t low_index)
+{
+    return (int16_t)(((uint16_t)g_rx_frame[low_index + 1U] << 8) |
+                     g_rx_frame[low_index]);
+}
+
+static bool IMU_IsAxis6FrameType(uint8_t type)
+{
+    return (type == IMU_FRAME_GYRO_Z) ||
+           (type == IMU_FRAME_YAW) ||
+           (type == IMU_FRAME_ACCEL) ||
+           (type == IMU_FRAME_QUATERNION) ||
+           (type == IMU_FRAME_REGISTER);
+}
+
+static void IMU_ParseByte(uint8_t byte)
+{
+    uint8_t checksum = 0U;
+    uint32_t i;
+
+    if (g_rx_index == 0U)
+    {
+        if (byte == IMU_FRAME_HEADER)
+        {
+            g_rx_frame[g_rx_index++] = byte;
+        }
+        return;
+    }
+
+    if (g_rx_index == 1U)
+    {
+        if (!IMU_IsAxis6FrameType(byte))
+        {
+            g_rx_index = (byte == IMU_FRAME_HEADER) ? 1U : 0U;
+            return;
+        }
+    }
+
+    g_rx_frame[g_rx_index++] = byte;
+    if (g_rx_index < IMU_FRAME_SIZE)
+    {
+        return;
+    }
+
+    for (i = 0U; i < (IMU_FRAME_SIZE - 1U); i++)
+    {
+        checksum = (uint8_t)(checksum + g_rx_frame[i]);
+    }
+
+    if (checksum == g_rx_frame[IMU_FRAME_SIZE - 1U])
+    {
+        switch (g_rx_frame[1])
+        {
+            case IMU_FRAME_GYRO_Z:
+                g_imu_data.gyro_x_raw = IMU_ReadS16(2U);
+                g_imu_data.gyro_y_raw = IMU_ReadS16(4U);
+                g_imu_data.gyro_z_raw = IMU_ReadS16(6U);
+                g_imu_data.gyro_frame_count++;
+                break;
+
+            case IMU_FRAME_YAW:
+                g_imu_data.roll_raw = IMU_ReadS16(2U);
+                g_imu_data.pitch_raw = IMU_ReadS16(4U);
+                g_imu_data.yaw_raw = IMU_ReadS16(6U);
+                g_imu_data.yaw_frame_count++;
+                break;
+
+            case IMU_FRAME_ACCEL:
+                g_imu_data.accel_x_raw = IMU_ReadS16(2U);
+                g_imu_data.accel_y_raw = IMU_ReadS16(4U);
+                g_imu_data.accel_z_raw = IMU_ReadS16(6U);
+                g_imu_data.accel_frame_count++;
+                break;
+
+            case IMU_FRAME_QUATERNION:
+                g_imu_data.quat_q0_raw = IMU_ReadS16(2U);
+                g_imu_data.quat_q1_raw = IMU_ReadS16(4U);
+                g_imu_data.quat_q2_raw = IMU_ReadS16(6U);
+                g_imu_data.quat_q3_raw = IMU_ReadS16(8U);
+                g_imu_data.quaternion_frame_count++;
+                break;
+
+            default:
+                break;
+        }
+    }
+    else
+    {
+        g_imu_data.checksum_error_count++;
+    }
+    g_rx_index = 0U;
+}
+#endif
 
 void IMU_Init(void)
 {
-    g_imu_data.gyro_z_dps = 0.0f;
-    g_imu_data.yaw_deg = 0.0f;
-    g_imu_data.gyro_frame_count = 0U;
-    g_imu_data.yaw_frame_count = 0U;
-    g_imu_data.checksum_error_count = 0U;
-    g_imu_data.rx_byte_count = 0U;
+    g_imu_data = (IMU_Data){0};
     g_rx_index = 0U;
 
+#if IMU_SELECTED_MODULE == IMU_MODULE_AXIS6
+    (void)IMU_SetHostBaudRate(115200U);
+#else
+    (void)IMU_SetHostBaudRate(9600U);
+#endif
+
+    DL_UART_Main_enableInterrupt(UART_1_INST, DL_UART_MAIN_INTERRUPT_RX);
     NVIC_ClearPendingIRQ(UART_1_INST_INT_IRQN);
     NVIC_EnableIRQ(UART_1_INST_INT_IRQN);
 }
@@ -130,12 +233,7 @@ void IMU_GetData(IMU_Data *data)
 
     primask = __get_PRIMASK();
     __disable_irq();
-    data->gyro_z_dps = g_imu_data.gyro_z_dps;
-    data->yaw_deg = g_imu_data.yaw_deg;
-    data->gyro_frame_count = g_imu_data.gyro_frame_count;
-    data->yaw_frame_count = g_imu_data.yaw_frame_count;
-    data->checksum_error_count = g_imu_data.checksum_error_count;
-    data->rx_byte_count = g_imu_data.rx_byte_count;
+    *data = g_imu_data;
     if (primask == 0U)
     {
         __enable_irq();
@@ -175,21 +273,21 @@ bool IMU_SetHostBaudRate(uint32_t baud_rate)
                                    integer_divisor,
                                    fractional_divisor);
     DL_UART_Main_enable(UART_1_INST);
+    DL_UART_Main_enableInterrupt(UART_1_INST, DL_UART_MAIN_INTERRUPT_RX);
     g_rx_index = 0U;
     NVIC_ClearPendingIRQ(UART_1_INST_INT_IRQN);
     NVIC_EnableIRQ(UART_1_INST_INT_IRQN);
-
     return true;
 }
 
 float GyroZ(void)
 {
-    return g_imu_data.gyro_z_dps;
+    return ((float)g_imu_data.gyro_z_raw * 2000.0f) / 32768.0f;
 }
 
 float Yaw(void)
 {
-    return g_imu_data.yaw_deg;
+    return ((float)g_imu_data.yaw_raw * 180.0f) / 32768.0f;
 }
 
 void IMU_ZeroYaw(void)
@@ -215,13 +313,17 @@ void IMU_SaveConfiguration(void)
 
 void IMU_SetOutputRate100Hz(void)
 {
+#if IMU_SELECTED_MODULE == IMU_MODULE_LEGACY
     IMU_SendBytes(g_cmd_unlock, sizeof(g_cmd_unlock));
     IMU_DelayMs(100U);
     IMU_SendBytes(g_cmd_rate_100hz, sizeof(g_cmd_rate_100hz));
     IMU_DelayMs(100U);
     IMU_SendBytes(g_cmd_save, sizeof(g_cmd_save));
-    IMU_DelayMs(100U);
+#else
+    (void)0;
+#endif
 }
+
 void UART_1_INST_IRQHandler(void)
 {
     switch (DL_UART_getPendingInterrupt(UART_1_INST))

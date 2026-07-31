@@ -30,6 +30,7 @@ void board_init(void)
 
     NVIC_ClearPendingIRQ(TIMER_0_INST_INT_IRQN);
     NVIC_EnableIRQ(TIMER_0_INST_INT_IRQN);
+    __enable_irq();
 }
 
 void uart0_send_char(char ch)

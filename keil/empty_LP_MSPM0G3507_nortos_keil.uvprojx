@@ -489,6 +489,16 @@
               <FileType>5</FileType>
               <FilePath>..\Application\TaskBonus1_LaserTrace.h</FilePath>
             </File>
+            <File>
+              <FileName>OledKeyTest.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\OledKeyTest.c</FilePath>
+            </File>
+            <File>
+              <FileName>OledKeyTest.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\OledKeyTest.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -545,9 +555,29 @@
               <FilePath>..\Hardware\TrackZone.h</FilePath>
             </File>
             <File>
-              <FileName>Bluetooth.c</FileName>
+              <FileName>StarFlash.c</FileName>
               <FileType>1</FileType>
-              <FilePath>../Hardware/Bluetooth.c</FilePath>
+              <FilePath>../Hardware/StarFlash.c</FilePath>
+            </File>
+            <File>
+              <FileName>OledDisplay.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\OledDisplay.c</FilePath>
+            </File>
+            <File>
+              <FileName>OledDisplay.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Hardware\OledDisplay.h</FilePath>
+            </File>
+            <File>
+              <FileName>KeyInput.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\KeyInput.c</FilePath>
+            </File>
+            <File>
+              <FileName>KeyInput.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Hardware\KeyInput.h</FilePath>
             </File>
             <File>
               <FileName>SpeedPI.c</FileName>

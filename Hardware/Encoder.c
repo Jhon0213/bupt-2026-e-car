@@ -57,16 +57,30 @@ int32_t Encoder_GetRightCount(void)
 void Encoder_ClearCount(void)
 {
     uint32_t primask;
+    uint8_t i;
 
     primask = EnterCritical();
     motor_1.countnum = 0;
     motor_2.countnum = 0;
     motor_1.lastcount = 0;
     motor_2.lastcount = 0;
+    motor_1.delta_count = 0;
+    motor_2.delta_count = 0;
     motor_1.speed_raw = 0.0f;
     motor_2.speed_raw = 0.0f;
     motor_1.speed = 0.0f;
     motor_2.speed = 0.0f;
+    motor_1.speed_record_sum = 0.0f;
+    motor_2.speed_record_sum = 0.0f;
+    motor_1.record_index = 0U;
+    motor_2.record_index = 0U;
+    motor_1.record_count = 0U;
+    motor_2.record_count = 0U;
+    for (i = 0U; i < SPEED_RECORD_NUM; i++)
+    {
+        motor_1.speed_Record[i] = 0.0f;
+        motor_2.speed_Record[i] = 0.0f;
+    }
     ExitCritical(primask);
 }
 
@@ -92,6 +106,54 @@ float Encoder_GetRightSpeed(void)
     ExitCritical(primask);
 
     return speed;
+}
+
+float Encoder_GetLeftRawSpeed(void)
+{
+    uint32_t primask;
+    float speed;
+
+    primask = EnterCritical();
+    speed = motor_2.speed_raw;
+    ExitCritical(primask);
+
+    return speed;
+}
+
+float Encoder_GetRightRawSpeed(void)
+{
+    uint32_t primask;
+    float speed;
+
+    primask = EnterCritical();
+    speed = motor_1.speed_raw;
+    ExitCritical(primask);
+
+    return speed;
+}
+
+int32_t Encoder_GetLeftDeltaCount(void)
+{
+    uint32_t primask;
+    int32_t delta_count;
+
+    primask = EnterCritical();
+    delta_count = motor_2.delta_count;
+    ExitCritical(primask);
+
+    return delta_count;
+}
+
+int32_t Encoder_GetRightDeltaCount(void)
+{
+    uint32_t primask;
+    int32_t delta_count;
+
+    primask = EnterCritical();
+    delta_count = motor_1.delta_count;
+    ExitCritical(primask);
+
+    return delta_count;
 }
 
 void TIMA1_IRQHandler(void)
@@ -134,22 +196,40 @@ void TIMG8_IRQHandler(void)
     }
 }
 
+static void Encoder_UpdateSpeed(volatile encoder_t *encoder)
+{
+    int32_t delta = encoder->countnum - encoder->lastcount;
+    float raw_rpm;
+
+    encoder->lastcount = encoder->countnum;
+    encoder->delta_count = delta;
+    raw_rpm = (float)delta * 6000.0f / PULSE_PER_CYCLE;
+    encoder->speed_raw = raw_rpm;
+
+    encoder->speed_record_sum -= encoder->speed_Record[encoder->record_index];
+    encoder->speed_Record[encoder->record_index] = raw_rpm;
+    encoder->speed_record_sum += raw_rpm;
+    encoder->record_index++;
+    if (encoder->record_index >= SPEED_RECORD_NUM)
+    {
+        encoder->record_index = 0U;
+    }
+    if (encoder->record_count < SPEED_RECORD_NUM)
+    {
+        encoder->record_count++;
+    }
+
+    encoder->speed = encoder->speed_record_sum / (float)encoder->record_count;
+}
+
 void Encoder_CalcSpeed_M1(void)
 {
-    int32_t delta = motor_1.countnum - motor_1.lastcount;
-
-    motor_1.lastcount = motor_1.countnum;
-    motor_1.speed_raw = (float)delta;
-    motor_1.speed = motor_1.speed_raw * 6000.0f / PULSE_PER_CYCLE;
+    Encoder_UpdateSpeed(&motor_1);
 }
 
 void Encoder_CalcSpeed_M2(void)
 {
-    int32_t delta = motor_2.countnum - motor_2.lastcount;
-
-    motor_2.lastcount = motor_2.countnum;
-    motor_2.speed_raw = (float)delta;
-    motor_2.speed = motor_2.speed_raw * 6000.0f / PULSE_PER_CYCLE;
+    Encoder_UpdateSpeed(&motor_2);
 }
 
 void TIMER_0_INST_IRQHandler(void)

@@ -7,6 +7,7 @@
 #define HEADING_CORRECTION_LIMIT_DEFAULT_RPM  60.0f
 #define HEADING_TARGET_MIN_DEFAULT_RPM         0.0f
 #define HEADING_TARGET_MAX_DEFAULT_RPM       180.0f
+#define HEADING_BASE_RPM_STEP_MAX             0.8f
 
 static float g_kp;
 static float g_ki;
@@ -15,6 +16,7 @@ static float g_last_error;
 static float g_correction_limit_rpm;
 static float g_target_min_rpm;
 static float g_target_max_rpm;
+static float g_base_target_rpm;
 static HeadingControl_Output g_output;
 
 static float Clamp(float value, float minimum, float maximum)
@@ -27,11 +29,11 @@ static float Clamp(float value, float minimum, float maximum)
 static void UpdateTargets(void)
 {
     g_output.left_target_rpm =
-        Clamp(g_output.base_rpm + g_output.correction_rpm,
+        Clamp(g_output.base_rpm - g_output.correction_rpm,
               g_target_min_rpm,
               g_target_max_rpm);
     g_output.right_target_rpm =
-        Clamp(g_output.base_rpm - g_output.correction_rpm,
+        Clamp(g_output.base_rpm + g_output.correction_rpm,
               g_target_min_rpm,
               g_target_max_rpm);
 }
@@ -45,6 +47,7 @@ void HeadingControl_Init(void)
     g_target_min_rpm = HEADING_TARGET_MIN_DEFAULT_RPM;
     g_target_max_rpm = HEADING_TARGET_MAX_DEFAULT_RPM;
     g_output.target_yaw_deg = 0.0f;
+    g_base_target_rpm = 0.0f;
     g_output.base_rpm = 0.0f;
     HeadingControl_Reset(0.0f);
 }
@@ -89,19 +92,25 @@ void HeadingControl_SetOutputLimits(float correction_limit_rpm,
 void HeadingControl_SetTarget(float target_yaw_deg, float base_rpm)
 {
     g_output.target_yaw_deg = target_yaw_deg;
-    g_output.base_rpm = base_rpm;
+    g_base_target_rpm = base_rpm;
     UpdateTargets();
 }
 
 void HeadingControl_SetBaseRPM(float base_rpm)
 {
-    g_output.base_rpm = base_rpm;
+    g_base_target_rpm = base_rpm;
     UpdateTargets();
 }
 
 void HeadingControl_Update(float actual_yaw_deg)
 {
     float pid_output;
+    float base_delta;
+
+    base_delta = g_base_target_rpm - g_output.base_rpm;
+    g_output.base_rpm += Clamp(base_delta,
+                               -HEADING_BASE_RPM_STEP_MAX,
+                               HEADING_BASE_RPM_STEP_MAX);
 
     g_output.actual_yaw_deg = actual_yaw_deg;
     g_output.error_deg = g_output.target_yaw_deg - actual_yaw_deg;

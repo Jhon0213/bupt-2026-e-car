@@ -4,7 +4,7 @@
 void SpeedPI_Init(void);
 void SpeedPI_Update(float left_target_rpm, float right_target_rpm);
 void SpeedPI_UpdateLeftOnly(float target_rpm);
-void SpeedPI_BalanceForStraight(float target_rpm);
+void SpeedPI_UpdateRightOnly(float target_rpm);
 void SpeedPI_Reset(void);
 
 int SpeedPI_GetLeftPWM(void);

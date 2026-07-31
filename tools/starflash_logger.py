@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bluetooth serial CSV logger for open-loop speed tests."""
+"""StarFlash serial CSV logger for open-loop speed tests."""
 
 from __future__ import annotations
 
@@ -30,9 +30,9 @@ HEADER = [
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Log Bluetooth serial CSV data to a local CSV file."
+        description="Log StarFlash serial CSV data to a local CSV file."
     )
-    parser.add_argument("--port", help="Bluetooth serial port, for example COM6")
+    parser.add_argument("--port", help="StarFlash serial port, for example COM6")
     parser.add_argument("--baud", type=int, default=115200, help="Baud rate, default 115200")
     parser.add_argument(
         "--out",
@@ -146,7 +146,7 @@ def main() -> None:
 
     if not args.port:
         print("ERROR: --port is required unless --list is used.", file=sys.stderr)
-        print("Example: python tools/bt_logger.py --port COM6 --baud 115200 --out logs/open_loop_log.csv")
+        print("Example: python tools/starflash_logger.py --port COM6 --baud 115200 --out logs/open_loop_log.csv")
         raise SystemExit(2)
 
     log_serial(args.port, args.baud, Path(args.out))
@@ -154,3 +154,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

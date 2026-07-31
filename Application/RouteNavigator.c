@@ -2,7 +2,7 @@
 
 #include "Application/RouteNavigator.h"
 
-#include "Hardware/Bluetooth.h"
+#include "Hardware/StarFlash.h"
 #include "Hardware/CONTROL/GrayTrack.h"
 #include "Hardware/CONTROL/HeadingControl.h"
 #include "Hardware/CONTROL/SpeedPI.h"
@@ -289,7 +289,7 @@ static void SendU32(uint32_t value)
 
     while (count != 0U)
     {
-        Bluetooth_SendByte((uint8_t)digits[--count]);
+        StarFlash_SendByte((uint8_t)digits[--count]);
     }
 }
 
@@ -297,7 +297,7 @@ static void SendI32(int32_t value)
 {
     if (value < 0)
     {
-        Bluetooth_SendByte((uint8_t)'-');
+        StarFlash_SendByte((uint8_t)'-');
         SendU32((uint32_t)(-(value + 1)) + 1U);
     }
     else
@@ -308,20 +308,20 @@ static void SendI32(int32_t value)
 
 static void SendField(int32_t value)
 {
-    Bluetooth_SendByte((uint8_t)',');
+    StarFlash_SendByte((uint8_t)',');
     SendI32(value);
 }
 
 static void SendLine(const char *text)
 {
-    Bluetooth_SendString(text);
-    Bluetooth_SendByte(13U);
-    Bluetooth_SendByte(10U);
+    StarFlash_SendString(text);
+    StarFlash_SendByte(13U);
+    StarFlash_SendByte(10U);
 }
 
 static void SendParameters(void)
 {
-    Bluetooth_SendString("P");
+    StarFlash_SendString("P");
     SendField(10);
     SendField(CONTROL_MS);
     SendField(LOG_MS);
@@ -350,8 +350,8 @@ static void SendParameters(void)
     SendField(I16(GrayTrack_GetCorrectionMaxRPM() * 10.0f));
     SendField(I16(GrayTrack_GetTargetMinRPM() * 10.0f));
     SendField(I16(GrayTrack_GetTargetMaxRPM() * 10.0f));
-    Bluetooth_SendByte(13U);
-    Bluetooth_SendByte(10U);
+    StarFlash_SendByte(13U);
+    StarFlash_SendByte(10U);
 }
 
 static void SaveLog(uint32_t sample_ms, uint8_t sample_state,
@@ -424,7 +424,7 @@ static void SendLogs(uint8_t final_reason, uint8_t final_state,
         int16_t packed_raw = item->raw;
         int16_t packed_black = item->black;
 
-        Bluetooth_SendString("D,");
+        StarFlash_SendString("D,");
         SendU32(item->ms);
         SendField(encoded_state / 100);
         SendField(encoded_state % 100);
@@ -450,18 +450,18 @@ static void SendLogs(uint8_t final_reason, uint8_t final_state,
         SendField(item->right_rpm10);
         SendField(item->left_pwm);
         SendField(item->right_pwm);
-        Bluetooth_SendByte(13U);
-        Bluetooth_SendByte(10U);
+        StarFlash_SendByte(13U);
+        StarFlash_SendByte(10U);
     }
 
-    Bluetooth_SendString("R,");
+    StarFlash_SendString("R,");
     SendU32(final_reason);
     SendField(log_lap);
     SendField(final_state);
     SendField((int32_t)(final_accum * 100.0f));
     SendField(log_count);
-    Bluetooth_SendByte(13U);
-    Bluetooth_SendByte(10U);
+    StarFlash_SendByte(13U);
+    StarFlash_SendByte(10U);
     SendLine("E");
 }
 
@@ -531,7 +531,7 @@ static void FinishRoute(uint8_t finish_reason)
     HeadingControl_GetOutput(&heading);
     SaveLog(ms, state,
             (log_session_active != 0U) ? LOG_EVENT_LAP_END : LOG_EVENT_NONE,
-            imu.yaw_deg, accumulated_yaw,
+            (((float)imu.yaw_raw * 180.0f) / 32768.0f), accumulated_yaw,
             &gray, &heading, left_command, right_command);
 
     SpeedPI_Reset();
@@ -616,7 +616,7 @@ void RouteNavigator_Start(void)
     running = 1U;
     paused = 0U;
     finished = 0U;
-    imu.yaw_deg = 0.0f;
+    imu.yaw_raw = 0;
     imu.yaw_frame_count = 0U;
 
     GrayTrack_Reset();
@@ -640,7 +640,7 @@ __attribute__((optnone)) void RouteNavigator_Update(void)
         IMU_GetData(&imu);
         if (imu.yaw_frame_count != 0U)
         {
-            last_yaw = imu.yaw_deg;
+            last_yaw = (((float)imu.yaw_raw * 180.0f) / 32768.0f);
             yaw_frames = imu.yaw_frame_count;
             state = STATE_HEADING_AB;
             state_ms = 0U;
@@ -662,8 +662,8 @@ __attribute__((optnone)) void RouteNavigator_Update(void)
 
             if (imu.yaw_frame_count != yaw_frames)
             {
-                accumulated_yaw += YawDelta(imu.yaw_deg, last_yaw);
-                last_yaw = imu.yaw_deg;
+                accumulated_yaw += YawDelta((((float)imu.yaw_raw * 180.0f) / 32768.0f), last_yaw);
+                last_yaw = (((float)imu.yaw_raw * 180.0f) / 32768.0f);
                 yaw_frames = imu.yaw_frame_count;
                 new_yaw = 1U;
             }
@@ -757,7 +757,7 @@ __attribute__((optnone)) void RouteNavigator_Update(void)
                         state_ms = 0U;
                         line_confirm = 0U;
                         Encoder_ClearCount();
-                        SpeedPI_BalanceForStraight(C_ADVANCE_RPM);
+                        SpeedPI_Update(C_ADVANCE_RPM, C_ADVANCE_RPM);
                         HeadingControl_SetGains(ADVANCE_HEADING_KP,
                                                 ADVANCE_HEADING_KI,
                                                 ADVANCE_HEADING_KD);
@@ -981,7 +981,7 @@ __attribute__((optnone)) void RouteNavigator_Update(void)
                         state = STATE_ADVANCE_A;
                         state_ms = 0U;
                         Encoder_ClearCount();
-                        SpeedPI_BalanceForStraight(A_ADVANCE_RPM);
+                        SpeedPI_Update(A_ADVANCE_RPM, A_ADVANCE_RPM);
                         HeadingControl_SetGains(ADVANCE_HEADING_KP,
                                                 ADVANCE_HEADING_KI,
                                                 ADVANCE_HEADING_KD);
@@ -1145,7 +1145,7 @@ __attribute__((optnone)) void RouteNavigator_Update(void)
             if (log_event != LOG_EVENT_NONE)
             {
                 SaveLog(ms, state, log_event,
-                        imu.yaw_deg, accumulated_yaw,
+                        (((float)imu.yaw_raw * 180.0f) / 32768.0f), accumulated_yaw,
                         &gray, &heading, left_command, right_command);
                 log_event = LOG_EVENT_NONE;
 
@@ -1167,7 +1167,7 @@ __attribute__((optnone)) void RouteNavigator_Update(void)
                      (ms >= next_log_ms))
             {
                 SaveLog(ms, state, LOG_EVENT_NONE,
-                        imu.yaw_deg, accumulated_yaw,
+                        (((float)imu.yaw_raw * 180.0f) / 32768.0f), accumulated_yaw,
                         &gray, &heading, left_command, right_command);
                 next_log_ms = ms + DetailedLogPeriod(state);
             }
@@ -1175,7 +1175,7 @@ __attribute__((optnone)) void RouteNavigator_Update(void)
                      (ms >= next_log_ms))
             {
                 SaveLog(ms, state, LOG_EVENT_NONE,
-                        imu.yaw_deg, accumulated_yaw,
+                        (((float)imu.yaw_raw * 180.0f) / 32768.0f), accumulated_yaw,
                         &gray, &heading, left_command, right_command);
                 next_log_ms += LOG_MS;
             }

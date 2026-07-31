@@ -18,6 +18,12 @@ void GrayTrack_Init(void);
 void GrayTrack_Reset(void);
 void GrayTrack_Update(void);
 void GrayTrack_GetOutput(GrayTrack_Output *output);
+void GrayTrack_SetErrorDeadband(uint8_t deadband);
+void GrayTrack_SetParams(float base_rpm,
+                         float kp_rpm,
+                         float correction_max_rpm,
+                         float correction_rise_step,
+                         float correction_fall_step);
 
 uint8_t GrayTrack_GetRaw(void);
 uint8_t GrayTrack_GetBlackMask(void);

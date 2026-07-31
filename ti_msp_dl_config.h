@@ -158,17 +158,17 @@ extern "C" {
 #define UART_1_INST_FREQUENCY                                            4000000
 #define UART_1_INST_IRQHandler                                  UART1_IRQHandler
 #define UART_1_INST_INT_IRQN                                      UART1_INT_IRQn
-#define GPIO_UART_1_RX_PORT                                                GPIOA
-#define GPIO_UART_1_TX_PORT                                                GPIOA
-#define GPIO_UART_1_RX_PIN                                        DL_GPIO_PIN_18
-#define GPIO_UART_1_TX_PIN                                        DL_GPIO_PIN_17
-#define GPIO_UART_1_IOMUX_RX                                     (IOMUX_PINCM40)
-#define GPIO_UART_1_IOMUX_TX                                     (IOMUX_PINCM39)
-#define GPIO_UART_1_IOMUX_RX_FUNC                      IOMUX_PINCM40_PF_UART1_RX
-#define GPIO_UART_1_IOMUX_TX_FUNC                      IOMUX_PINCM39_PF_UART1_TX
-#define UART_1_BAUD_RATE                                                  (9600)
-#define UART_1_IBRD_4_MHZ_9600_BAUD                                         (26)
-#define UART_1_FBRD_4_MHZ_9600_BAUD                                          (3)
+#define GPIO_UART_1_RX_PORT                                                GPIOB
+#define GPIO_UART_1_TX_PORT                                                GPIOB
+#define GPIO_UART_1_RX_PIN                                         DL_GPIO_PIN_5
+#define GPIO_UART_1_TX_PIN                                         DL_GPIO_PIN_4
+#define GPIO_UART_1_IOMUX_RX                                     (IOMUX_PINCM18)
+#define GPIO_UART_1_IOMUX_TX                                     (IOMUX_PINCM17)
+#define GPIO_UART_1_IOMUX_RX_FUNC                      IOMUX_PINCM18_PF_UART1_RX
+#define GPIO_UART_1_IOMUX_TX_FUNC                      IOMUX_PINCM17_PF_UART1_TX
+#define UART_1_BAUD_RATE                                                (115200)
+#define UART_1_IBRD_4_MHZ_115200_BAUD                                        (2)
+#define UART_1_FBRD_4_MHZ_115200_BAUD                                       (11)
 /* Defines for UART_2 */
 #define UART_2_INST                                                        UART2
 #define UART_2_INST_FREQUENCY                                            4000000
@@ -182,22 +182,29 @@ extern "C" {
 #define GPIO_UART_2_IOMUX_TX                                     (IOMUX_PINCM46)
 #define GPIO_UART_2_IOMUX_RX_FUNC                      IOMUX_PINCM47_PF_UART2_RX
 #define GPIO_UART_2_IOMUX_TX_FUNC                      IOMUX_PINCM46_PF_UART2_TX
-#define UART_2_BAUD_RATE                                                  (9600)
-#define UART_2_IBRD_4_MHZ_9600_BAUD                                         (26)
-#define UART_2_FBRD_4_MHZ_9600_BAUD                                          (3)
+#define UART_2_BAUD_RATE                                                (115200)
+#define UART_2_IBRD_4_MHZ_115200_BAUD                                        (2)
+#define UART_2_FBRD_4_MHZ_115200_BAUD                                       (11)
 
 
 
 
-/* Port definition for Pin Group GRAY */
-#define GRAY_PORT                                                        (GPIOB)
-
-/* Defines for DAT: GPIOB.8 with pinCMx 25 on package pin 60 */
-#define GRAY_DAT_PIN                                            (DL_GPIO_PIN_8)
-#define GRAY_DAT_IOMUX                                           (IOMUX_PINCM25)
-/* Defines for CLK: GPIOB.9 with pinCMx 26 on package pin 61 */
-#define GRAY_CLK_PIN                                            (DL_GPIO_PIN_9)
-#define GRAY_CLK_IOMUX                                           (IOMUX_PINCM26)
+/* Defines for LINE_I2C */
+#define LINE_I2C_INST                                                      I2C1
+#define LINE_I2C_INST_IRQHandler                                  I2C1_IRQHandler
+#define LINE_I2C_INST_INT_IRQN                                    (I2C1_INT_IRQn)
+#define LINE_I2C_INST_CLK_FREQ                                          80000000
+#define LINE_I2C_BUS_SPEED_HZ                                            100000
+/* GPIO defines for I2C1 SCL: GPIOB.2 with pinCMx 15 */
+#define GPIO_LINE_I2C_SCL_PORT                                             GPIOB
+#define GPIO_LINE_I2C_SCL_PIN                                      DL_GPIO_PIN_2
+#define GPIO_LINE_I2C_SCL_IOMUX                                  (IOMUX_PINCM15)
+#define GPIO_LINE_I2C_SCL_IOMUX_FUNC                    IOMUX_PINCM15_PF_I2C1_SCL
+/* GPIO defines for I2C1 SDA: GPIOB.3 with pinCMx 16 */
+#define GPIO_LINE_I2C_SDA_PORT                                             GPIOB
+#define GPIO_LINE_I2C_SDA_PIN                                      DL_GPIO_PIN_3
+#define GPIO_LINE_I2C_SDA_IOMUX                                  (IOMUX_PINCM16)
+#define GPIO_LINE_I2C_SDA_IOMUX_FUNC                    IOMUX_PINCM16_PF_I2C1_SDA
 
 
 
@@ -237,6 +244,7 @@ void SYSCFG_DL_TIMER_1_init(void);
 void SYSCFG_DL_UART_0_init(void);
 void SYSCFG_DL_UART_1_init(void);
 void SYSCFG_DL_UART_2_init(void);
+void SYSCFG_DL_LINE_I2C_init(void);
 
 
 bool SYSCFG_DL_saveConfiguration(void);

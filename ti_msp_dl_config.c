@@ -144,12 +144,12 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
         GPIO_UART_2_IOMUX_TX, GPIO_UART_2_IOMUX_TX_FUNC);
     DL_GPIO_initPeripheralInputFunction(
         GPIO_UART_2_IOMUX_RX, GPIO_UART_2_IOMUX_RX_FUNC);
-
-    DL_GPIO_initDigitalInputFeatures(GRAY_DAT_IOMUX,
-		 DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
-		 DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
-
-    DL_GPIO_initDigitalOutput(GRAY_CLK_IOMUX);
+    DL_GPIO_initDigitalInputFeatures(GPIO_LINE_I2C_SCL_IOMUX,
+         DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
+         DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
+    DL_GPIO_initDigitalInputFeatures(GPIO_LINE_I2C_SDA_IOMUX,
+         DL_GPIO_INVERSION_DISABLE, DL_GPIO_RESISTOR_PULL_UP,
+         DL_GPIO_HYSTERESIS_DISABLE, DL_GPIO_WAKEUP_DISABLE);
 
     DL_GPIO_initDigitalOutput(Motor1_M1PIN_25_IOMUX);
 
@@ -167,8 +167,6 @@ SYSCONFIG_WEAK void SYSCFG_DL_GPIO_init(void)
 		Motor2_M2PIN_27_PIN);
     DL_GPIO_enableOutput(GPIOA, Motor1_M1PIN_25_PIN |
 		Motor2_M2PIN_27_PIN);
-    DL_GPIO_clearPins(GPIOB, GRAY_CLK_PIN);
-    DL_GPIO_enableOutput(GPIOB, GRAY_CLK_PIN);
 
 }
 
@@ -412,6 +410,10 @@ SYSCONFIG_WEAK void SYSCFG_DL_TIMER_1_init(void) {
 
 
 
+SYSCONFIG_WEAK void SYSCFG_DL_LINE_I2C_init(void)
+{
+}
+
 static const DL_UART_Main_ClockConfig gUART_0ClockConfig = {
     .clockSel    = DL_UART_MAIN_CLOCK_MFCLK,
     .divideRatio = DL_UART_MAIN_CLOCK_DIVIDE_RATIO_1
@@ -469,11 +471,11 @@ SYSCONFIG_WEAK void SYSCFG_DL_UART_1_init(void)
     DL_UART_Main_init(UART_1_INST, (DL_UART_Main_Config *) &gUART_1Config);
     /*
      * Configure baud rate by setting oversampling and baud rate divisors.
-     *  Target baud rate: 9600
-     *  Actual baud rate: 9598.08
+     *  Target baud rate: 115200
+     *  Actual baud rate: 115107.91
      */
     DL_UART_Main_setOversampling(UART_1_INST, DL_UART_OVERSAMPLING_RATE_16X);
-    DL_UART_Main_setBaudRateDivisor(UART_1_INST, UART_1_IBRD_4_MHZ_9600_BAUD, UART_1_FBRD_4_MHZ_9600_BAUD);
+    DL_UART_Main_setBaudRateDivisor(UART_1_INST, UART_1_IBRD_4_MHZ_115200_BAUD, UART_1_FBRD_4_MHZ_115200_BAUD);
 
 
     /* Configure Interrupts */
@@ -505,9 +507,11 @@ SYSCONFIG_WEAK void SYSCFG_DL_UART_2_init(void)
     DL_UART_Main_init(UART_2_INST, (DL_UART_Main_Config *) &gUART_2Config);
     DL_UART_Main_setOversampling(UART_2_INST, DL_UART_OVERSAMPLING_RATE_16X);
     DL_UART_Main_setBaudRateDivisor(UART_2_INST,
-        UART_2_IBRD_4_MHZ_9600_BAUD, UART_2_FBRD_4_MHZ_9600_BAUD);
+        UART_2_IBRD_4_MHZ_115200_BAUD, UART_2_FBRD_4_MHZ_115200_BAUD);
     DL_UART_Main_enableInterrupt(UART_2_INST, DL_UART_MAIN_INTERRUPT_RX);
     DL_UART_Main_enable(UART_2_INST);
 }
+
+
 
 
