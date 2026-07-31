@@ -490,6 +490,16 @@
               <FilePath>..\Application\TaskBonus1_LaserTrace.h</FilePath>
             </File>
             <File>
+              <FileName>TaskArch001Timing.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\TaskArch001Timing.c</FilePath>
+            </File>
+            <File>
+              <FileName>TaskArch001Timing.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\TaskArch001Timing.h</FilePath>
+            </File>
+            <File>
               <FileName>OledKeyTest.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Application\OledKeyTest.c</FilePath>
@@ -498,6 +508,16 @@
               <FileName>OledKeyTest.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Application\OledKeyTest.h</FilePath>
+            </File>
+            <File>
+              <FileName>OledRealtimeTime.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\OledRealtimeTime.c</FilePath>
+            </File>
+            <File>
+              <FileName>OledRealtimeTime.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\OledRealtimeTime.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -603,6 +623,21 @@
               <FileName>control.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Hardware\CONTROL\control.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Hardware/Diagnostics</GroupName>
+          <Files>
+            <File>
+              <FileName>ControlTimingDiag.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Hardware\Diagnostics\ControlTimingDiag.c</FilePath>
+            </File>
+            <File>
+              <FileName>ControlTimingDiag.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Hardware\Diagnostics\ControlTimingDiag.h</FilePath>
             </File>
           </Files>
         </Group>

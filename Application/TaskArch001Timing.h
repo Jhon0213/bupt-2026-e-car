@@ -1,0 +1,6 @@
+#ifndef APPLICATION_TASK_ARCH001_TIMING_H_
+#define APPLICATION_TASK_ARCH001_TIMING_H_
+
+void TaskArch001Timing_Run(void);
+
+#endif

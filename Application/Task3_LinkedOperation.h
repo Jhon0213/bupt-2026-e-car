@@ -13,6 +13,7 @@ typedef enum
 void Task3_LinkedOperation_Run(void);
 void Task3_LinkedOperation_Start(uint32_t now_ms);
 void Task3_LinkedOperation_StartMode(uint32_t now_ms, Task3_RunMode mode);
+void Task3_LinkedOperation_SetDebugEnabled(uint8_t enabled);
 void Task3_LinkedOperation_Stop(void);
 void Task3_LinkedOperation_Update(uint32_t now_ms);
 uint8_t Task3_LinkedOperation_IsRunning(void);

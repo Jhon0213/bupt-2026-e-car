@@ -1,8 +1,8 @@
 # 小车底盘、循迹、里程计与实时架构总控文档
 
-> 项目仓库：`Jhon0213/bupt-2026-e-car`  
-> 默认分支：`main`  
-> 文档定位：底盘与循迹子系统的长期总控文档  
+> 项目仓库：`Jhon0213/bupt-2026-e-car`
+> 默认分支：`main`
+> 文档定位：底盘与循迹子系统的长期总控文档
 > 使用方式：每次开始分析、调试、修改代码前先阅读本文件；每完成一个阶段后更新状态、实验结果和下一步动作。
 
 ---
@@ -219,17 +219,20 @@ FIXING      正在修改
 VERIFYING   正在复测
 DONE        已完成
 BLOCKED     被其他问题阻塞
+PENDING_HARDWARE_TEST 等待硬件空载验证
 ```
 
 ### 6.1 实时架构
 
 | 编号 | 问题 | 状态 | 依赖 |
 |---|---|---:|---|
-| ARCH-001 | 测量控制任务真实周期和抖动 | TODO | 无 |
+| ARCH-001 | 测量控制任务真实周期和抖动 | DONE | 无 |
 | ARCH-002 | 测量各模块执行时间 | TODO | ARCH-001 |
 | ARCH-003 | 排查阻塞调用 | TODO | ARCH-001 |
 | ARCH-004 | 建立控制任务和非关键任务分频调度 | TODO | ARCH-001~003 |
 | ARCH-005 | 进行渐进式代码结构重构 | TODO | 前述控制行为稳定 |
+| ARCH-006 | OLED 运行期非阻塞实时计时 | DONE | ARCH-001 |
+| FORMAL-OLED-001 | 正式 OledKeyTest 空载集成验证 | PENDING_HARDWARE_TEST | ARCH-006 |
 
 ### 6.2 编码器与里程计
 
@@ -399,6 +402,97 @@ DEBUG_PIN_LOW();
 
 ---
 
+### 8.6 ARCH-001 实测结论
+
+| 测试组 | OLED | CSV | 控制次数 | 平均周期 | 最大周期 | Catch-up | Backlog 丢弃 |
+|---|---|---|---:|---:|---:|---:|---:|
+| B_NO_CSV | 开 | 关 | 559 | 17.90 ms | 260 ms | 20 | 20 |
+| C_NO_OLED | 关 | 开 | 1000 | 10.00 ms | 10 ms | 0 | 0 |
+| D_MIN_LOAD | 关 | 关 | 1000 | 10.00 ms | 10 ms | 0 | 0 |
+
+结论：OLED 全屏软件 I2C 刷新是造成 10 ms 主循环控制任务超周期、catch-up 和 backlog 丢弃的确定性根因；当前 CSV 在关闭 OLED 后没有造成周期丢失。因此短期策略不是迁移 FreeRTOS，而是将运行期 OLED 改为局部、分步、非阻塞刷新。
+
+### 8.7 OLED 运行期最终方案
+
+1. WAIT / MENU 状态允许完整刷新；
+2. 启动前绘制静态运行页面；
+3. 完整刷新结束后再开始 Task3 计时；
+4. RUN 期间显示整数秒，格式固定为 `000s`；
+5. 显示频率为 1 Hz；
+6. 内部计时精度保持毫秒；
+7. 静态 `TIME:` 和 `s` 不重复发送；
+8. 每轮最多发送 2 列 OLED 数据；
+9. Task3 控制优先于 OLED 服务；
+10. RUN 状态使用 `delay_ms(1U)`；
+11. STOP / DONE 后允许完整刷新最终结果；
+12. 星闪 CSV 保持 50 ms 周期并开启；
+13. 当前不需要 FreeRTOS。
+
+正式数据流：
+
+```text
+board_millis
+  -> elapsed_ms
+  -> elapsed_seconds
+  -> 秒数变化检测
+  -> fixed-width desired_text
+  -> dirty 字符检测
+  -> 帧缓冲更新
+  -> OLED 局部分片发送
+```
+
+主循环顺序：
+
+```text
+Task3_LinkedOperation_Update
+  -> OledRealtimeTime_Request
+  -> OledRealtimeTime_ProcessOneStep
+  -> delay_ms(1)
+```
+
+### 8.8 整数秒 E_REALTIME_TIME 实测结论
+
+`ARCH001_CASE_E_REALTIME_TIME` 已通过空载硬件时序验收：
+
+| 指标 | 结果 |
+|---|---:|
+| control_count | 1000 |
+| period_sample_count | 999 |
+| period_min_ms | 10 |
+| period_avg_x100_ms | 1000 |
+| period_max_ms | 10 |
+| period_0ms_count | 0 |
+| period_10ms_count | 999 |
+| period_20ms_count | 0 |
+| period_30ms_count | 0 |
+| period_over_30ms_count | 0 |
+| catchup_event_count | 0 |
+| catchup_step_count | 0 |
+| backlog_drop_event_count | 0 |
+| csv_send_count | 200 |
+| oled_refresh_count | 0 |
+| oled_partial_write_count | 27 |
+| oled_partial_exec_max_ms | 10 |
+| oled_partial_over_10ms_count | 0 |
+
+结论：10 秒内完成 1000 次控制，999 个周期样本全部为 10 ms；无 0 ms 补执行、无 20 ms 周期、无 catch-up、无 backlog 丢弃；CSV 与 OLED 整数秒局部显示同时开启时，底盘 10 ms 控制周期保持稳定。测试开始前出现的串口乱码已确认为 UART TX 接触不良，不属于程序异常。
+
+### 8.9 当前阶段顺序
+
+```text
+ARCH-001 DONE
+  -> OLED 整数秒局部显示 E 组通过
+  -> 正式 OledKeyTest 空载验证
+  -> 正式 OledKeyTest 实车验证
+  -> 直线摇摆定位
+  -> 弯道控制优化
+  -> 里程计标定
+  -> 停车精度优化
+```
+
+在正式 OledKeyTest 集成验证完成前，不调整 GrayTrack 和 SpeedPI 参数。
+
+---
 ## 9. 阶段 2：编码器与里程计校准
 
 ### 9.1 首先确认换算链路
@@ -1001,10 +1095,10 @@ OLED 刷新
 - 控制周期：
 
 ### 修改内容
-- 
+-
 
 ### 测试方法
-- 
+-
 
 ### 原始数据
 - 日志文件：
@@ -1019,10 +1113,10 @@ OLED 刷新
 - 停车误差：
 
 ### 结论
-- 
+-
 
 ### 下一步
-- 
+-
 ```
 
 ---
@@ -1178,28 +1272,31 @@ Commit：
 ## 19. 当前推荐执行顺序
 
 ```text
-第 1 步：ARCH-001
+第 1 步：ARCH-001（DONE）
 测量 10 ms 控制任务的真实周期、最大周期和超周期次数。
 
-第 2 步：ARCH-002 / ARCH-003
-测量模块执行时间，排查 OLED、通信、打印和等待操作。
+第 2 步：ARCH-006（DONE）
+整数秒 1 Hz OLED 局部分片显示已通过 E_REALTIME_TIME 空载时序验证。
 
-第 3 步：ODOM-001 ~ ODOM-004
+第 3 步：FORMAL-OLED-001
+完成正式 OledKeyTest 菜单链路空载集成验证。
+
+第 4 步：ODOM-001 ~ ODOM-004
 确认编码器参数和左右轮独立距离系数。
 
-第 4 步：ODOM-005 ~ ODOM-007
+第 5 步：ODOM-005 ~ ODOM-007
 完成直线、半圆和整圈误差分析。
 
-第 5 步：TRACK-001 ~ TRACK-007
+第 6 步：TRACK-001 ~ TRACK-007
 处理直线左右摇摆。
 
-第 6 步：CURVE-001 ~ CURVE-006
+第 7 步：CURVE-001 ~ CURVE-006
 处理半圆平滑转弯。
 
-第 7 步：STOP-001 ~ STOP-007
+第 8 步：STOP-001 ~ STOP-007
 实现融合终点检测和精准停车。
 
-第 8 步：ARCH-004 / ARCH-005
+第 9 步：ARCH-004 / ARCH-005
 在行为和数据明确后，进行渐进式结构重构。
 ```
 
@@ -1207,7 +1304,7 @@ Commit：
 
 ## 20. 当前下一步
 
-当前建议从 `ARCH-001` 开始，不先修改循迹 PID，不先全面重构。
+当前建议先完成 `FORMAL-OLED-001` 正式 OledKeyTest 空载集成验证，不先修改循迹 PID，不先全面重构。
 
 需要完成：
 
@@ -1219,7 +1316,7 @@ Commit：
    - 最大周期；
    - 超周期次数；
    - 各主要模块执行时间；
-5. 根据测量结果决定是否需要调度重构。
+5. 通过正式空载验证后再进入实车赛道验证。
 
 ---
 
@@ -1228,4 +1325,7 @@ Commit：
 | 日期 | Commit | 更新内容 | 更新人 |
 |---|---|---|---|
 | 2026-07-31 | 待填写 | 创建底盘、循迹、里程计与实时架构总控文档 | siyuen |
-
+| 2026-07-31 | `cc273286` | ARCH-001 进入 ANALYZING：完成调用链代码审计，确认硬件 tick 与主循环控制任务分离，待 GPIO 实机测量 | siyuen / GPT |
+| 2026-07-31 | `cc273286` | ARCH-001 实测完成，新增 ARCH-006：运行期 OLED 局部实时计时验证 | siyuen / GPT |
+| 2026-07-31 | `cc273286` | ARCH-006 第一次 E 组为 PARTIAL PASS；运行期计时改为整数秒、1Hz、每轮最多 2 列局部发送 | siyuen / GPT |
+| 2026-07-31 | `cc273286` | ARCH-006 最终 E 组通过：整数秒 OLED 局部显示与 CSV 同开时控制周期严格 10ms；进入正式 OledKeyTest 空载验证 | siyuen / GPT |

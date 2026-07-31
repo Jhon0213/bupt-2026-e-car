@@ -3,6 +3,7 @@
 #include "Application/Task3_LinkedOperation.h"
 
 #include "Application/RouteNavigator.h"
+#include "Hardware/Diagnostics/ControlTimingDiag.h"
 #include "Hardware/Encoder.h"
 #include "Hardware/Gray.h"
 #include "Hardware/Motor.h"
@@ -99,6 +100,7 @@ static float g_task3_gray_correction_max;
 static float g_task3_gray_rise_step;
 static float g_task3_gray_fall_step;
 static uint32_t g_task3_next_debug_ms;
+static uint8_t g_task3_debug_stream_enabled = 1U;
 static uint8_t g_task3_debug_mode;
 static uint8_t g_task3_lap_done;
 static Task3_RunMode g_task3_run_mode;
@@ -733,13 +735,19 @@ static void Task3_SendDebugLine(void)
 {
 #if TASK3_DEBUG_STREAM
     uint32_t now_ms = board_millis();
+    uint32_t csv_start_ms;
 
+    if (g_task3_debug_stream_enabled == 0U)
+    {
+        return;
+    }
     if ((now_ms - g_task3_next_debug_ms) >= 0x80000000UL)
     {
         return;
     }
     g_task3_next_debug_ms = now_ms + TASK3_DEBUG_LOG_MS;
 
+    csv_start_ms = board_millis();
     Task3_SendI32((int32_t)g_task3_segment);
     Task3_SendDebugField((int32_t)g_task3_debug_mode);
     Task3_SendDebugField((int32_t)Task3_GetParamMode());
@@ -765,6 +773,7 @@ static void Task3_SendDebugLine(void)
     Task3_SendDebugField((int32_t)SpeedPI_GetLeftPWM());
     Task3_SendDebugField((int32_t)SpeedPI_GetRightPWM());
     StarFlash_SendString("\r\n");
+    ControlTimingDiag_RecordCsvDuration(board_millis() - csv_start_ms);
 #endif
 }
 
@@ -1039,6 +1048,12 @@ void Task3_LinkedOperation_Start(uint32_t now_ms)
 {
     Task3_LinkedOperation_StartMode(now_ms, TASK3_RUN_ONE_LAP);
 }
+
+void Task3_LinkedOperation_SetDebugEnabled(uint8_t enabled)
+{
+    g_task3_debug_stream_enabled = (enabled != 0U) ? 1U : 0U;
+}
+
 void Task3_LinkedOperation_Stop(void)
 {
     g_task3_running = 0U;
@@ -1058,12 +1073,21 @@ void Task3_LinkedOperation_Update(uint32_t now_ms)
     while (((now_ms - g_task3_next_control_ms) < 0x80000000UL) &&
            (steps < 3U))
     {
+        uint32_t control_start_ms = board_millis();
+
+        ControlTimingDiag_ControlBegin(control_start_ms);
         Task3_ControlStep();
+        ControlTimingDiag_ControlEnd(board_millis());
         g_task3_next_control_ms += TASK3_CONTROL_MS;
         steps++;
     }
+    if (steps > 1U)
+    {
+        ControlTimingDiag_RecordCatchup((uint32_t)steps - 1U);
+    }
     if ((now_ms - g_task3_next_control_ms) < 0x80000000UL)
     {
+        ControlTimingDiag_RecordBacklogDrop();
         g_task3_next_control_ms = now_ms + TASK3_CONTROL_MS;
     }
 }

@@ -256,6 +256,72 @@ void OledDisplay_WriteLine(uint8_t line, const char *text)
     }
 }
 
+void OledDisplay_WriteChar(uint8_t line, uint8_t char_index, char ch)
+{
+    uint8_t glyph[5];
+    uint8_t x;
+    uint8_t *row;
+
+    if ((line >= OLED_PAGES) || (char_index >= OLED_CHARS_PER_LINE))
+    {
+        return;
+    }
+
+    x = (uint8_t)(char_index * 6U);
+    if ((uint16_t)x + 5U >= OLED_WIDTH)
+    {
+        return;
+    }
+
+    row = &g_oled_buffer[(uint16_t)line * OLED_WIDTH];
+    GetGlyph(ch, glyph);
+    row[x + 0U] = glyph[0];
+    row[x + 1U] = glyph[1];
+    row[x + 2U] = glyph[2];
+    row[x + 3U] = glyph[3];
+    row[x + 4U] = glyph[4];
+    row[x + 5U] = 0x00U;
+}
+
+void OledDisplay_UpdateRegion(uint8_t page,
+                              uint8_t column_start,
+                              uint8_t column_end)
+{
+    uint8_t count;
+
+    if ((page >= OLED_PAGES) ||
+        (column_start >= OLED_WIDTH) ||
+        (column_end >= OLED_WIDTH) ||
+        (column_start > column_end))
+    {
+        return;
+    }
+
+    count = (uint8_t)(column_end - column_start + 1U);
+    OledSendCommand((uint8_t)(0xB0U + page));
+    OledSendCommand((uint8_t)(0x00U | (column_start & 0x0FU)));
+    OledSendCommand((uint8_t)(0x10U | ((column_start >> 4U) & 0x0FU)));
+    OledSendData(&g_oled_buffer[(uint16_t)page * OLED_WIDTH + column_start],
+                 count);
+}
+
+void OledDisplay_UpdateGlyph(uint8_t line, uint8_t char_index)
+{
+    uint8_t column;
+
+    if ((line >= OLED_PAGES) || (char_index >= OLED_CHARS_PER_LINE))
+    {
+        return;
+    }
+
+    column = (uint8_t)(char_index * 6U);
+    if ((uint16_t)column + 5U >= OLED_WIDTH)
+    {
+        return;
+    }
+
+    OledDisplay_UpdateRegion(line, column, (uint8_t)(column + 5U));
+}
 void OledDisplay_Update(void)
 {
     uint8_t page;

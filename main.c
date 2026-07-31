@@ -2,6 +2,7 @@
 #include "Application/OledKeyTest.h"
 #include "Application/Task1_AutoTrace.h"
 #include "Application/Task3_LinkedOperation.h"
+#include "Application/TaskArch001Timing.h"
 #include "Application/TaskBonus1_LaserTrace.h"
 #include "Hardware/StarFlash.h"
 #include "Hardware/CONTROL/HeadingControl.h"
@@ -21,6 +22,7 @@
 #define TASK_MODE_STARFLASH_UART_TEST     9U
 #define TASK_MODE_STRAIGHT_30RPM_TEST    10U
 #define TASK_MODE_OLED_KEY_TEST          11U
+#define TASK_MODE_ARCH001_TIMING_TEST   12U
 
 /* Use TASK_MODE_STARFLASH_UART_TEST only for UART2 link diagnostics. */
 #define SELECTED_TASK_MODE TASK_MODE_OLED_KEY_TEST
@@ -814,6 +816,7 @@ int main(void)
     delay_ms(1000U);
 #if (SELECTED_TASK_MODE != TASK_MODE_LEFT_SPEED_TUNING) && \
     (SELECTED_TASK_MODE != TASK_MODE_STRAIGHT_30RPM_TEST) && \
+    (SELECTED_TASK_MODE != TASK_MODE_ARCH001_TIMING_TEST) && \
     (SELECTED_TASK_MODE != TASK_MODE_OLED_KEY_TEST)
     Debug_SendString("STARFLASH_UART2_READY,115200\r\n");
     delay_ms(500U);
@@ -837,6 +840,8 @@ int main(void)
     RunLeftSpeedTuningTest();
 #elif SELECTED_TASK_MODE == TASK_MODE_STRAIGHT_30RPM_TEST
     RunStraight30rpmTest();
+#elif SELECTED_TASK_MODE == TASK_MODE_ARCH001_TIMING_TEST
+    TaskArch001Timing_Run();
 #elif SELECTED_TASK_MODE == TASK_MODE_OLED_KEY_TEST
     OledKeyTest_Run();
 #elif SELECTED_TASK_MODE == TASK_MODE_STARFLASH_UART_TEST

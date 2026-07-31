@@ -1,4 +1,5 @@
 #include "Application/OledKeyTest.h"
+#include "Application/OledRealtimeTime.h"
 #include "Application/Task3_LinkedOperation.h"
 
 #include "Hardware/Gray.h"
@@ -224,6 +225,16 @@ static void DrawScreen(uint32_t now_ms)
     OledDisplay_Update();
 }
 
+static void DrawTraceRunScreen(void)
+{
+    OledDisplay_Clear();
+    OledDisplay_WriteLine(0U, TaskText());
+    OledDisplay_WriteLine(2U, "STATE: RUN");
+    OledDisplay_WriteLine(4U, "TIME: 000s");
+    OledDisplay_WriteLine(6U, "ODO: --------");
+    OledDisplay_WriteLine(7U, "K1 STOP");
+    OledDisplay_Update();
+}
 static void SendGraySample(uint32_t now_ms)
 {
     Gray_Update();
@@ -296,10 +307,14 @@ static void StartTask2I2CDiag(uint32_t now_ms)
 
 static void StopCurrentTask(void)
 {
+    uint32_t final_ms = board_millis();
+
     g_running = 0U;
     if (IsTraceTask() != 0U)
     {
         Task3_LinkedOperation_Stop();
+        OledRealtimeTime_Reset();
+        g_elapsed_ms = final_ms - g_run_start_ms;
     }
     Motor_Coast();
 }
@@ -311,12 +326,19 @@ static void StartCurrentTask(uint32_t now_ms)
 
     if (IsTraceTask() != 0U)
     {
+        uint32_t start_ms;
+
+        DrawTraceRunScreen();
+        start_ms = board_millis();
         g_running = 1U;
-        g_run_start_ms = now_ms;
-        Task3_LinkedOperation_StartMode(now_ms, CurrentTraceMode());
+        g_run_start_ms = start_ms;
+        g_last_screen_ms = start_ms;
+        Task3_LinkedOperation_StartMode(start_ms, CurrentTraceMode());
+        OledRealtimeTime_Init(start_ms);
         return;
     }
 
+    (void)now_ms;
     g_running = 0U;
     Motor_Brake();
     StarFlash_SendString("TASK1_STANDBY,MOTOR_BRAKE\r\n");
@@ -357,8 +379,19 @@ static void UpdateRunningTask(uint32_t now_ms)
         Task3_LinkedOperation_Update(now_ms);
         if (Task3_LinkedOperation_IsRunning() == 0U)
         {
+            uint32_t final_ms = board_millis();
+
             g_running = 0U;
+            Task3_LinkedOperation_Stop();
+            Motor_Coast();
+            g_elapsed_ms = final_ms - g_run_start_ms;
+            OledRealtimeTime_Reset();
+            DrawScreen(final_ms);
+            g_last_screen_ms = final_ms;
+            return;
         }
+        OledRealtimeTime_Request(now_ms);
+        OledRealtimeTime_ProcessOneStep();
         return;
     }
 
@@ -396,13 +429,18 @@ void OledKeyTest_Run(void)
             if (g_running != 0U)
             {
                 StopCurrentTask();
+                DrawScreen(board_millis());
+                g_last_screen_ms = board_millis();
             }
             else
             {
                 StartCurrentTask(now_ms);
+                if (g_running == 0U)
+                {
+                    DrawScreen(board_millis());
+                    g_last_screen_ms = board_millis();
+                }
             }
-            DrawScreen(now_ms);
-            g_last_screen_ms = now_ms;
         }
 
         if (((events & KEY_INPUT_K2_PRESSED) != 0U) && (g_running == 0U))
@@ -415,13 +453,21 @@ void OledKeyTest_Run(void)
         UpdateRunningTask(board_millis());
 
         now_ms = board_millis();
-        if ((now_ms - g_last_screen_ms) >= OLED_REFRESH_MS)
+        if ((g_running == 0U) &&
+            ((now_ms - g_last_screen_ms) >= OLED_REFRESH_MS))
         {
             DrawScreen(now_ms);
             g_last_screen_ms = now_ms;
         }
 
-        delay_ms(5U);
+        if (g_running != 0U)
+        {
+            delay_ms(1U);
+        }
+        else
+        {
+            delay_ms(5U);
+        }
     }
 }
 
