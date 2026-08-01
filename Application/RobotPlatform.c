@@ -1,5 +1,8 @@
 #include "Application/RobotPlatform.h"
+#include "Application/BuildConfig.h"
 #include "Application/StatusSignal.h"
+#include "Communication/InterboardUart.h"
+#include "Communication/VehicleStatePublisher.h"
 
 #include "Hardware/StarFlash.h"
 #include "Hardware/Buzzer.h"
@@ -20,7 +23,12 @@ void RobotPlatform_Init(void)
     LaserRelay_Init();
     TrackZone_Init();
     StatusSignal_Init();
+#if STARFLASH_DEBUG_ENABLE
     StarFlash_Init();
+#endif
+#if INTERBOARD_LINK_ENABLE
+    InterboardUart_Init();
+#endif
     Motor_Init();
     Encoder_Init();
     GrayTrack_Init();
@@ -28,4 +36,7 @@ void RobotPlatform_Init(void)
     HeadingControl_Init();
     IMU_Init();
     Motor_Coast();
+#if INTERBOARD_LINK_ENABLE
+    VehicleStatePublisher_Init(board_millis());
+#endif
 }

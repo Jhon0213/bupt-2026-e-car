@@ -11,6 +11,25 @@ typedef enum
     TASK3_RUN_ONE_LAP_ALT
 } Task3_RunMode;
 
+typedef enum
+{
+    TASK3_STOP_REASON_NONE = 0U,
+    TASK3_STOP_REASON_USER,
+    TASK3_STOP_REASON_FINISHED,
+    TASK3_STOP_REASON_LINE_LOST,
+    TASK3_STOP_REASON_GRAY_FAULT,
+    TASK3_STOP_REASON_INTERNAL_FAULT
+} Task3_StopReason;
+
+typedef struct
+{
+    uint8_t running;
+    uint8_t turning;
+    uint8_t line_valid;
+    uint8_t finished;
+    Task3_StopReason stop_reason;
+} Task3_ApplicationState;
+
 typedef struct
 {
     uint8_t segment;
@@ -36,11 +55,13 @@ typedef struct
     uint8_t curve_lost_hold;
     uint8_t straight_slew_active;
 } Task3_DiagSnapshot;
+
 void Task3_LinkedOperation_Run(void);
 void Task3_LinkedOperation_Start(uint32_t now_ms);
 void Task3_LinkedOperation_StartMode(uint32_t now_ms, Task3_RunMode mode);
 void Task3_LinkedOperation_SetDebugEnabled(uint8_t enabled);
 void Task3_LinkedOperation_Stop(void);
+void Task3_LinkedOperation_StopByUser(void);
 void Task3_LinkedOperation_Update(uint32_t now_ms);
 uint8_t Task3_LinkedOperation_IsRunning(void);
 const char *Task3_LinkedOperation_GetSegmentText(void);
@@ -48,6 +69,6 @@ int16_t Task3_LinkedOperation_GetProgressX10(void);
 int32_t Task3_LinkedOperation_GetOdometerCount(void);
 const Task3_DiagSnapshot *Task3_LinkedOperation_GetDiagSnapshot(void);
 void Task3_LinkedOperation_CopyDiagSnapshot(Task3_DiagSnapshot *snapshot);
+void Task3_LinkedOperation_GetApplicationState(Task3_ApplicationState *state);
 
 #endif
-

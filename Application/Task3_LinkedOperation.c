@@ -1,4 +1,4 @@
-﻿#include <stdint.h>
+#include <stdint.h>
 
 #include "Application/Task3_LinkedOperation.h"
 
@@ -139,6 +139,7 @@ static uint32_t g_task3_next_debug_ms;
 static uint8_t g_task3_debug_stream_enabled = TASK3_PERIODIC_CSV_ENABLE;
 static uint8_t g_task3_debug_mode;
 static uint8_t g_task3_lap_done;
+static Task3_StopReason g_task3_stop_reason;
 static Task3_RunMode g_task3_run_mode;
 static uint8_t g_task3_point_stop_active;
 static uint32_t g_task3_point_stop_until_ms;
@@ -1154,6 +1155,8 @@ static void Task3_StraightDiagStep(void)
 
 static void Task3_StopForLost(void)
 {
+    g_task3_stop_reason = TASK3_STOP_REASON_LINE_LOST;
+    g_task3_running = 0U;
     g_task3_curve_lost_hold = 0U;
     Task3_StopAndClearControl();
 }
@@ -1283,6 +1286,7 @@ static void Task3_ControlStep(void)
     if (Task3_ShouldStopAtBcExitCompStart() != 0U)
     {
         g_task3_debug_mode = 7U;
+        g_task3_stop_reason = TASK3_STOP_REASON_INTERNAL_FAULT;
         Task3_StopAndClearControl();
         Task3_SendDebugLine();
         g_task3_running = 0U;
@@ -1291,6 +1295,7 @@ static void Task3_ControlStep(void)
     if (g_task3_lap_done != 0U)
     {
         g_task3_debug_mode = 6U;
+        g_task3_stop_reason = TASK3_STOP_REASON_FINISHED;
         Task3_StopAndClearControl();
         Task3_SendDebugLine();
         g_task3_running = 0U;
@@ -1305,11 +1310,16 @@ static void Task3_ControlStep(void)
     if (Gray_IsI2COk() == 0U)
     {
         g_task3_debug_mode = 5U;
+        g_task3_stop_reason = TASK3_STOP_REASON_GRAY_FAULT;
         Task3_StopAndClearControl();
+        Task3_SendDebugLine();
+        g_task3_running = 0U;
+        return;
     }
     else if (Task3_ShouldStopAtFinish() != 0U)
     {
         g_task3_lap_done = 1U;
+        g_task3_stop_reason = TASK3_STOP_REASON_FINISHED;
         g_task3_debug_mode = 6U;
         Task3_StopAndClearControl();
         Task3_SendDebugLine();
@@ -1372,6 +1382,7 @@ void Task3_LinkedOperation_StartMode(uint32_t now_ms, Task3_RunMode mode)
     g_task3_next_debug_ms = now_ms;
     g_task3_debug_mode = 0U;
     g_task3_lap_done = 0U;
+    g_task3_stop_reason = TASK3_STOP_REASON_NONE;
     g_task3_point_stop_active = 0U;
     g_task3_point_stop_until_ms = 0U;
     g_task3_point_stop_segment = TASK3_SEG_AB;
@@ -1405,6 +1416,16 @@ void Task3_LinkedOperation_Stop(void)
     SpeedPI_Reset();
     Motor_Coast();
     Task3_ClearDiagControlSnapshot();
+}
+
+void Task3_LinkedOperation_StopByUser(void)
+{
+    if ((g_task3_running != 0U) &&
+        (g_task3_stop_reason == TASK3_STOP_REASON_NONE))
+    {
+        g_task3_stop_reason = TASK3_STOP_REASON_USER;
+    }
+    Task3_LinkedOperation_Stop();
 }
 
 void Task3_LinkedOperation_Update(uint32_t now_ms)
@@ -1528,4 +1549,22 @@ void Task3_LinkedOperation_CopyDiagSnapshot(Task3_DiagSnapshot *snapshot)
     }
 
     *snapshot = g_task3_diag_snapshot;
+}
+
+void Task3_LinkedOperation_GetApplicationState(Task3_ApplicationState *state)
+{
+    if (state == 0)
+    {
+        return;
+    }
+
+    state->running = g_task3_running;
+    state->turning = ((g_task3_running != 0U) &&
+                      (Task3_IsCurveSegment() != 0U)) ? 1U : 0U;
+    state->line_valid = ((g_task3_running != 0U) &&
+                         (Gray_IsI2COk() != 0U) &&
+                         (g_task3_gray.line_detected != 0U)) ? 1U : 0U;
+    state->finished = ((g_task3_running == 0U) &&
+                       (g_task3_stop_reason == TASK3_STOP_REASON_FINISHED)) ? 1U : 0U;
+    state->stop_reason = g_task3_stop_reason;
 }

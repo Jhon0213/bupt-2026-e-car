@@ -1329,3 +1329,78 @@ Minimum burn-test steps:
 4. Press K2 to Task3, press K1, verify B+5cm stop and lower 70/60 RPM behavior near B/BC.
 5. Press K2 to Task4, press K1, verify one-lap ball-load stability at 75/60 RPM.
 6. Confirm no VOFA/CSV/debug text is emitted in final release while OLED timing still updates.
+---
+## INTERBOARD-LINK-001 One-way Chassis State Link
+
+Date: 2026-08-01
+Status: CODE COMPLETE, BUILD VERIFIED
+
+Implementation:
+- Added chassis-board to ball-control-board one-way UART2 state link.
+- UART2 TX is PA21. Connect PA21 to the other board UART_RX and connect GND to GND.
+- Electrical level is 3.3V TTL, UART is 115200 baud, 8-N-1.
+- Final release uses INTERBOARD_LINK_ENABLE = 1 and STARFLASH_DEBUG_ENABLE = 0.
+- Debug restore build uses INTERBOARD_LINK_ENABLE = 0 and STARFLASH_DEBUG_ENABLE = 1.
+- BuildConfig has a compile-time error if both UART2 owners are enabled.
+
+Protocol:
+- Fixed 50Hz publish period, one frame every 20ms.
+- Fixed 18-byte binary frame, no ACK, no retry, no variable length, no history FIFO.
+- Frame header is A5 5A.
+- All multi-byte fields are Little-Endian and encoded byte-by-byte.
+- checksum8 is XOR of offsets 2 through 16 only.
+- The frame contains sequence, timestamp_ms, motion_phase, target speed, measured speed, target acceleration, measured acceleration, and flags.
+- task_id and ball_target_position were intentionally removed.
+
+Motion and flags:
+- motion_phase only uses STOPPED=0, STRAIGHT=1, TURNING=2.
+- AB/CD publish STRAIGHT; BC/DA publish TURNING; stopped, standby, finished, user stop, line lost, gray fault publish STOPPED.
+- Flags use STATE_VALID, RUNNING, LINE_VALID, FINISHED, EMERGENCY_STOP, ACCEL_VALID, with bit6/bit7 fixed 0.
+- Task3 now exposes a read-only application state snapshot with running, turning, line_valid, finished, and stop_reason.
+- Normal finish sets FINISHED=1 and EMERGENCY_STOP=0.
+- User stop, line-lost stop, gray I2C fault, and internal safety stop set EMERGENCY_STOP=1 and FINISHED=0.
+- FINISHED and EMERGENCY_STOP are held until the next formal task start.
+
+Speed and acceleration fields:
+- Communication speed conversion uses an independent fixed wheel diameter of 65.0mm.
+- speed_mm_s = rpm * (65.0 * 3.1415926) / 60.0.
+- Target speed uses the average of SpeedPI_GetLeftTarget() and SpeedPI_GetRightTarget(), then converts to mm/s.
+- Stopped target speed is forced to 0 immediately.
+- Measured speed uses the average of Encoder_GetLeftSpeed() and Encoder_GetRightSpeed(), then converts to mm/s.
+- Measured speed continues publishing after stop so the other board can see coast-down.
+- Target acceleration is calculated from adjacent 20ms published target speed samples.
+- Measured acceleration is calculated from adjacent 20ms measured speed samples and filtered with alpha=0.2.
+- Acceleration filtering is communication-only and does not feed back into SpeedPI, GrayTrack, target speed, motor PWM, route, or stopping logic.
+- int16 fields are saturated to -32768..32767 and rounded consistently before encoding.
+
+TX behavior:
+- UART2 sending uses active_frame plus latest pending_frame.
+- A new frame starts immediately when idle.
+- While active is being sent, the first new frame becomes pending.
+- If another new frame arrives before pending is sent, pending is overwritten and overwrite_count increments.
+- sequence increments when a 20ms state is generated, not when it is physically sent, so overwritten pending frames appear as sequence jumps on the receiver.
+- UART TX is interrupt-driven with DL_UART_Main_transmitDataCheck() and never waits for UART busy in the control path.
+- UART2 RX is disabled for Interboard release mode.
+
+Release debug-output policy:
+- Final release no longer calls StarFlash_Init().
+- StarFlash_SendByte() and StarFlash_SendString() are empty in final release, so legacy debug paths cannot put ASCII on UART2.
+- Task3 periodic CSV, DualLoopDiag VOFA, SpeedCalibration VOFA, ARCH001 text, OLED_MENU_READY, TASK1_STANDBY, gray logs, and I2C scan logs remain disabled or no-op on UART2 in final release.
+- UART0 printf behavior is unchanged.
+
+Integration order:
+- RobotPlatform_Init calls board_init, platform hardware init, InterboardUart_Init in final release, motor/encoder/control init, then VehicleStatePublisher_Init.
+- main startup delay now calls VehicleStatePublisher_Process() every 5ms while waiting so standby frames are already sent before the OLED menu loop starts.
+- OledKeyTest main loop order is key update, K1/K2 handling, UpdateRunningTask(), VehicleStatePublisher_Process(), OLED low-priority refresh, short delay.
+- The 10ms Task3 control step does not format or send UART data.
+
+Build verification:
+- Final release build: FINAL_RELEASE_BUILD=1, SELECTED_TASK_MODE=TASK_MODE_OLED_KEY_TEST, INTERBOARD_LINK_ENABLE=1, STARFLASH_DEBUG_ENABLE=0: 0 Error(s), 0 Warning(s).
+- Debug restore build: FINAL_RELEASE_BUILD=0, INTERBOARD_LINK_ENABLE=0, STARFLASH_DEBUG_ENABLE=1: 0 Error(s), 0 Warning(s).
+- Final release was restored and rebuilt: 0 Error(s), 0 Warning(s).
+- Keil project includes Communication/InterboardProtocol.c, Communication/InterboardUart.c, and Communication/VehicleStatePublisher.c.
+- Final map shows UART2_IRQHandler from interboarduart.o.
+
+Unchanged control items:
+- Task2/Task3/Task4 speed profiles were not changed.
+- Startup ramp, straight correction slew, route segment lengths, B+5cm stop, full-lap finish advance, SpeedPI gains/feedforward, GrayTrack parameters, encoder scaling/filtering, motor direction, 10ms control period, OLED realtime timing, and existing safety stop order were preserved.

@@ -542,6 +542,41 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>Communication</GroupName>
+          <Files>
+            <File>
+              <FileName>InterboardProtocol.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Communication\InterboardProtocol.c</FilePath>
+            </File>
+            <File>
+              <FileName>InterboardProtocol.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Communication\InterboardProtocol.h</FilePath>
+            </File>
+            <File>
+              <FileName>InterboardUart.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Communication\InterboardUart.c</FilePath>
+            </File>
+            <File>
+              <FileName>InterboardUart.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Communication\InterboardUart.h</FilePath>
+            </File>
+            <File>
+              <FileName>VehicleStatePublisher.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Communication\VehicleStatePublisher.c</FilePath>
+            </File>
+            <File>
+              <FileName>VehicleStatePublisher.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Communication\VehicleStatePublisher.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>Hardware</GroupName>
           <Files>
             <File>

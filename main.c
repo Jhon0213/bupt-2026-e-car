@@ -1,10 +1,11 @@
-﻿#include "Application/BuildConfig.h"
+#include "Application/BuildConfig.h"
 #include "Application/RobotPlatform.h"
 #include "Application/OledKeyTest.h"
 #include "Application/SpeedCalibrationTest.h"
 #include "Application/Task1_AutoTrace.h"
 #include "Application/Task3_LinkedOperation.h"
 #include "Application/TaskArch001Timing.h"
+#include "Communication/VehicleStatePublisher.h"
 #include "Application/TaskDualLoopDiag.h"
 #include "Application/TaskBonus1_LaserTrace.h"
 #include "Hardware/StarFlash.h"
@@ -753,6 +754,16 @@ static void RunStarFlashUartTest(void)
         delay_ms(500U);
     }
 }
+static void StartupDelayWithPublisher(uint32_t duration_ms)
+{
+    uint32_t start_ms = board_millis();
+
+    while ((board_millis() - start_ms) < duration_ms)
+    {
+        VehicleStatePublisher_Process(board_millis());
+        delay_ms(5U);
+    }
+}
 static void RunHeadingTuningTest(void)
 {
     IMU_Data imu;
@@ -818,7 +829,7 @@ int main(void)
 #endif
 
     Motor_Brake();
-    delay_ms(1000U);
+    StartupDelayWithPublisher(1000U);
 #if CONTROL_DEBUG_PRINT_ENABLE
 #if (SELECTED_TASK_MODE != TASK_MODE_LEFT_SPEED_TUNING) && \
     (SELECTED_TASK_MODE != TASK_MODE_STRAIGHT_30RPM_TEST) && \

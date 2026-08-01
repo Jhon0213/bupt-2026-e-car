@@ -1,7 +1,8 @@
-﻿#include "Application/OledKeyTest.h"
+#include "Application/OledKeyTest.h"
 #include "Application/BuildConfig.h"
 #include "Application/OledRealtimeTime.h"
 #include "Application/Task3_LinkedOperation.h"
+#include "Communication/VehicleStatePublisher.h"
 
 #include "Hardware/Gray.h"
 #include "Hardware/KeyInput.h"
@@ -313,7 +314,7 @@ static void StopCurrentTask(void)
     g_running = 0U;
     if (IsTraceTask() != 0U)
     {
-        Task3_LinkedOperation_Stop();
+        Task3_LinkedOperation_StopByUser();
         OledRealtimeTime_Reset();
         g_elapsed_ms = final_ms - g_run_start_ms;
     }
@@ -455,7 +456,9 @@ void OledKeyTest_Run(void)
             g_last_screen_ms = now_ms;
         }
 
-        UpdateRunningTask(board_millis());
+        now_ms = board_millis();
+        UpdateRunningTask(now_ms);
+        VehicleStatePublisher_Process(board_millis());
 
         now_ms = board_millis();
         if ((g_running == 0U) &&
