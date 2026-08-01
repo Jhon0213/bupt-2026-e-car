@@ -1,8 +1,11 @@
+﻿#include "Application/BuildConfig.h"
 #include "Application/RobotPlatform.h"
 #include "Application/OledKeyTest.h"
+#include "Application/SpeedCalibrationTest.h"
 #include "Application/Task1_AutoTrace.h"
 #include "Application/Task3_LinkedOperation.h"
 #include "Application/TaskArch001Timing.h"
+#include "Application/TaskDualLoopDiag.h"
 #include "Application/TaskBonus1_LaserTrace.h"
 #include "Hardware/StarFlash.h"
 #include "Hardware/CONTROL/HeadingControl.h"
@@ -23,6 +26,8 @@
 #define TASK_MODE_STRAIGHT_30RPM_TEST    10U
 #define TASK_MODE_OLED_KEY_TEST          11U
 #define TASK_MODE_ARCH001_TIMING_TEST   12U
+#define TASK_MODE_SPEED_CALIBRATION_TEST 13U
+#define TASK_MODE_DUAL_LOOP_DIAG_TEST    14U
 
 /* Use TASK_MODE_STARFLASH_UART_TEST only for UART2 link diagnostics. */
 #define SELECTED_TASK_MODE TASK_MODE_OLED_KEY_TEST
@@ -814,15 +819,19 @@ int main(void)
 
     Motor_Brake();
     delay_ms(1000U);
+#if CONTROL_DEBUG_PRINT_ENABLE
 #if (SELECTED_TASK_MODE != TASK_MODE_LEFT_SPEED_TUNING) && \
     (SELECTED_TASK_MODE != TASK_MODE_STRAIGHT_30RPM_TEST) && \
     (SELECTED_TASK_MODE != TASK_MODE_ARCH001_TIMING_TEST) && \
+    (SELECTED_TASK_MODE != TASK_MODE_SPEED_CALIBRATION_TEST) && \
+    (SELECTED_TASK_MODE != TASK_MODE_DUAL_LOOP_DIAG_TEST) && \
     (SELECTED_TASK_MODE != TASK_MODE_OLED_KEY_TEST)
     Debug_SendString("STARFLASH_UART2_READY,115200\r\n");
     delay_ms(500U);
     Debug_SendString("STARFLASH_UART2_READY,115200\r\n");
     delay_ms(500U);
     Debug_SendString("STARFLASH_UART2_READY,115200\r\n");
+#endif
 #endif
     board_clear_control_ticks();
 
@@ -842,6 +851,10 @@ int main(void)
     RunStraight30rpmTest();
 #elif SELECTED_TASK_MODE == TASK_MODE_ARCH001_TIMING_TEST
     TaskArch001Timing_Run();
+#elif SELECTED_TASK_MODE == TASK_MODE_SPEED_CALIBRATION_TEST
+    SpeedCalibrationTest_Run();
+#elif SELECTED_TASK_MODE == TASK_MODE_DUAL_LOOP_DIAG_TEST
+    TaskDualLoopDiag_Run();
 #elif SELECTED_TASK_MODE == TASK_MODE_OLED_KEY_TEST
     OledKeyTest_Run();
 #elif SELECTED_TASK_MODE == TASK_MODE_STARFLASH_UART_TEST

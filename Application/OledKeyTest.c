@@ -1,4 +1,5 @@
-#include "Application/OledKeyTest.h"
+﻿#include "Application/OledKeyTest.h"
+#include "Application/BuildConfig.h"
 #include "Application/OledRealtimeTime.h"
 #include "Application/Task3_LinkedOperation.h"
 
@@ -121,7 +122,7 @@ static const char *TaskText(void)
     }
     if (g_task == MENU_TASK4_ONE_LAP_ALT)
     {
-        return "TASK4: ONE LAP";
+        return "TASK4: BALL LAP";
     }
     return "TASK1: STANDBY";
 }
@@ -341,7 +342,9 @@ static void StartCurrentTask(uint32_t now_ms)
     (void)now_ms;
     g_running = 0U;
     Motor_Brake();
+#if CONTROL_DEBUG_PRINT_ENABLE
     StarFlash_SendString("TASK1_STANDBY,MOTOR_BRAKE\r\n");
+#endif
 }
 
 static void NextTask(void)
@@ -414,7 +417,9 @@ void OledKeyTest_Run(void)
     g_next_gray_log_ms = 0U;
     g_next_scan_log_ms = 0U;
 
-    StarFlash_SendString("OLED_MENU_READY,T1_STANDBY,T2_ONE_LAP,T3_B_PLUS_5CM,T4_ONE_LAP\r\n");
+#if CONTROL_DEBUG_PRINT_ENABLE
+    StarFlash_SendString("OLED_MENU_READY,T1_STANDBY,T2_ONE_LAP,T3_B_PLUS_5CM,T4_BALL_LAP\r\n");
+#endif
     DrawScreen(board_millis());
 
     while (1)

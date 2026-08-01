@@ -1,6 +1,8 @@
-#include <stdint.h>
+﻿#include <stdint.h>
 
 #include "Application/Task3_LinkedOperation.h"
+
+#include "Application/BuildConfig.h"
 
 #include "Application/RouteNavigator.h"
 #include "Hardware/Diagnostics/ControlTimingDiag.h"
@@ -15,6 +17,9 @@
 #define TASK3_CONTROL_MS ROUTE_NAVIGATOR_CONTROL_MS
 #define TASK3_DEBUG_STREAM 1U
 #define TASK3_DEBUG_LOG_MS 50U
+#define TASK3_STARTUP_RAMP_MS 600U
+#define TASK3_STRAIGHT_CORR_SLEW_ENABLE 1
+#define TASK3_STRAIGHT_CORR_SLEW_RPM_PER_S 200.0f
 #define TASK3_STRAIGHT_DIAG_MODE 0U
 #define TASK3_STRAIGHT_DIAG_MS 1000U
 #define TASK3_STRAIGHT_DIAG_TARGET_RPM 100.0f
@@ -24,12 +29,10 @@
 #define TASK3_NORMAL_ERROR_DEADBAND 1U
 #define TASK3_PRE_CURVE_START_COUNT 82300L
 #define TASK3_PRE_CURVE_RAMP_COUNT 10300L
-#define TASK3_STRAIGHT_BASE_RPM 100.0f
 #define TASK3_STRAIGHT_KP_RPM 5.5f
 #define TASK3_STRAIGHT_CORRECTION_MAX 45.0f
 #define TASK3_STRAIGHT_RISE_STEP 4.0f
 #define TASK3_STRAIGHT_FALL_STEP 10.0f
-#define TASK3_CURVE_BASE_RPM 88.0f
 #define TASK3_CURVE_KP_RPM 5.0f
 #define TASK3_CURVE_CORRECTION_MAX 42.0f
 #define TASK3_CURVE_RISE_STEP 3.0f
@@ -42,7 +45,6 @@
 #define TASK3_POINT_STOP_ENABLE 0U
 #define TASK3_B_PLUS_STOP_AFTER_B_CM 5.0f
 #define TASK3_TARGET_RPM_MAX 145.0f
-#define TASK3_PRE_CURVE_BASE_RPM 92.0f
 #define TASK3_PRE_CURVE_KP_RPM 5.8f
 #define TASK3_PRE_CURVE_CORRECTION_MAX 42.0f
 #define TASK3_PRE_CURVE_RISE_STEP 5.0f
@@ -57,6 +59,8 @@
 #define TASK3_TRACK_RADIUS_CM 50.0f
 #define TASK3_FINISH_WINDOW_BEFORE_CM 60.0f
 #define TASK3_FINISH_STOP_OFFSET_CM 33.0f
+#define TASK3_FINISH_EXTRA_ADVANCE_ENABLE 1
+#define TASK3_FINISH_EXTRA_ADVANCE_CM 0.8f
 #define TASK3_FINISH_CONFIRM_COUNT 1U
 
 typedef enum
@@ -66,6 +70,38 @@ typedef enum
     TASK3_SEG_CD,
     TASK3_SEG_DA
 } Task3Segment;
+
+typedef struct
+{
+    float straight_base_rpm;
+    float curve_base_rpm;
+    uint32_t startup_ramp_ms;
+    uint8_t finish_extra_advance_enable;
+} Task3MotionProfile;
+
+static const Task3MotionProfile kTask2Profile =
+{
+    100.0f,
+    88.0f,
+    600U,
+    1U
+};
+
+static const Task3MotionProfile kTask3Profile =
+{
+    70.0f,
+    60.0f,
+    600U,
+    0U
+};
+
+static const Task3MotionProfile kTask4Profile =
+{
+    75.0f,
+    60.0f,
+    600U,
+    1U
+};
 
 static uint8_t g_task3_running;
 static uint32_t g_task3_next_control_ms;
@@ -100,7 +136,7 @@ static float g_task3_gray_correction_max;
 static float g_task3_gray_rise_step;
 static float g_task3_gray_fall_step;
 static uint32_t g_task3_next_debug_ms;
-static uint8_t g_task3_debug_stream_enabled = 1U;
+static uint8_t g_task3_debug_stream_enabled = TASK3_PERIODIC_CSV_ENABLE;
 static uint8_t g_task3_debug_mode;
 static uint8_t g_task3_lap_done;
 static Task3_RunMode g_task3_run_mode;
@@ -108,6 +144,16 @@ static uint8_t g_task3_point_stop_active;
 static uint32_t g_task3_point_stop_until_ms;
 static Task3Segment g_task3_point_stop_segment;
 static uint8_t g_task3_point_stop_mask;
+static Task3_DiagSnapshot g_task3_diag_snapshot;
+static uint8_t g_task3_startup_ramp_active;
+static uint32_t g_task3_startup_ramp_start_ms;
+static float g_task3_desired_base_rpm;
+static float g_task3_ramped_base_rpm;
+static uint8_t g_task3_corr_slew_initialized;
+static uint8_t g_task3_corr_slew_active;
+static float g_task3_raw_correction_rpm;
+static float g_task3_applied_correction_rpm;
+static const Task3MotionProfile *g_task3_motion_profile = &kTask2Profile;
 
 static const char *Task3_SegmentCode(Task3Segment segment)
 {
@@ -129,6 +175,52 @@ static uint8_t Task3_IsCurveSegment(void)
 {
     return ((g_task3_segment == TASK3_SEG_BC) ||
             (g_task3_segment == TASK3_SEG_DA)) ? 1U : 0U;
+}
+
+static const Task3MotionProfile *Task3_GetDefaultProfile(Task3_RunMode mode)
+{
+    if (mode == TASK3_RUN_B_PLUS_5CM)
+    {
+        return &kTask3Profile;
+    }
+    if (mode == TASK3_RUN_ONE_LAP_ALT)
+    {
+        return &kTask4Profile;
+    }
+    return &kTask2Profile;
+}
+
+static const Task3MotionProfile *Task3_GetActiveProfile(void)
+{
+    if (g_task3_motion_profile == 0)
+    {
+        return &kTask2Profile;
+    }
+    return g_task3_motion_profile;
+}
+
+static float Task3_GetProfileStraightBaseRPM(void)
+{
+    return Task3_GetActiveProfile()->straight_base_rpm;
+}
+
+static float Task3_GetProfileCurveBaseRPM(void)
+{
+    return Task3_GetActiveProfile()->curve_base_rpm;
+}
+
+static uint32_t Task3_GetProfileStartupRampMs(void)
+{
+    return Task3_GetActiveProfile()->startup_ramp_ms;
+}
+
+static uint8_t Task3_IsFinishExtraAdvanceEnabled(void)
+{
+#if TASK3_FINISH_EXTRA_ADVANCE_ENABLE
+    return (Task3_GetActiveProfile()->finish_extra_advance_enable != 0U) ? 1U : 0U;
+#else
+    return 0U;
+#endif
 }
 
 static uint8_t Task3_IsLostHoldAllowed(void)
@@ -166,6 +258,57 @@ static float Task3_SlewFloat(float current, float target, float step)
     return target;
 }
 
+static void Task3_ResetStartupRampState(void)
+{
+    g_task3_startup_ramp_active = 0U;
+    g_task3_startup_ramp_start_ms = 0U;
+    g_task3_desired_base_rpm = 0.0f;
+    g_task3_ramped_base_rpm = 0.0f;
+}
+
+static void Task3_StartStartupRamp(uint32_t now_ms)
+{
+    g_task3_startup_ramp_active = 1U;
+    g_task3_startup_ramp_start_ms = now_ms;
+    g_task3_desired_base_rpm = 0.0f;
+    g_task3_ramped_base_rpm = 0.0f;
+}
+
+static float Task3_UpdateStartupBaseRamp(float desired_base_rpm, uint32_t now_ms)
+{
+    uint32_t elapsed_ms;
+    float ramped_base_rpm;
+
+    desired_base_rpm = Task3_ClampFloat(desired_base_rpm, 0.0f, TASK3_TARGET_RPM_MAX);
+    g_task3_desired_base_rpm = desired_base_rpm;
+
+    if (g_task3_startup_ramp_active == 0U)
+    {
+        g_task3_ramped_base_rpm = desired_base_rpm;
+        return desired_base_rpm;
+    }
+
+    elapsed_ms = now_ms - g_task3_startup_ramp_start_ms;
+    {
+        uint32_t startup_ramp_ms = Task3_GetProfileStartupRampMs();
+
+        if ((startup_ramp_ms == 0U) || (elapsed_ms >= startup_ramp_ms))
+        {
+            g_task3_startup_ramp_active = 0U;
+            g_task3_ramped_base_rpm = desired_base_rpm;
+            g_task3_gray_base_rpm = desired_base_rpm;
+            return desired_base_rpm;
+        }
+
+        ramped_base_rpm = (desired_base_rpm * (float)elapsed_ms) /
+                          (float)startup_ramp_ms;
+    }
+    g_task3_ramped_base_rpm = Task3_ClampFloat(ramped_base_rpm,
+                                               0.0f,
+                                               desired_base_rpm);
+    return g_task3_ramped_base_rpm;
+}
+
 static void Task3_SetGrayParamsSmooth(uint8_t deadband,
                                       float base_rpm,
                                       float kp_rpm,
@@ -186,9 +329,16 @@ static void Task3_SetGrayParamsSmooth(uint8_t deadband,
     }
     else
     {
-        g_task3_gray_base_rpm = Task3_SlewFloat(g_task3_gray_base_rpm,
-                                                base_rpm,
-                                                TASK3_PARAM_BASE_STEP);
+        if (g_task3_startup_ramp_active != 0U)
+        {
+            g_task3_gray_base_rpm = base_rpm;
+        }
+        else
+        {
+            g_task3_gray_base_rpm = Task3_SlewFloat(g_task3_gray_base_rpm,
+                                                    base_rpm,
+                                                    TASK3_PARAM_BASE_STEP);
+        }
         g_task3_gray_kp_rpm = Task3_SlewFloat(g_task3_gray_kp_rpm,
                                               kp_rpm,
                                               TASK3_PARAM_KP_STEP);
@@ -309,6 +459,64 @@ static uint8_t Task3_IsStraightSegment(void)
 {
     return ((g_task3_segment == TASK3_SEG_AB) ||
             (g_task3_segment == TASK3_SEG_CD)) ? 1U : 0U;
+}
+
+static void Task3_ResetStraightCorrectionSlew(void)
+{
+    g_task3_corr_slew_initialized = 0U;
+    g_task3_corr_slew_active = 0U;
+    g_task3_raw_correction_rpm = 0.0f;
+    g_task3_applied_correction_rpm = 0.0f;
+}
+
+static void Task3_StartStraightCorrectionSlew(void)
+{
+    g_task3_corr_slew_initialized = 1U;
+    g_task3_corr_slew_active = 1U;
+    g_task3_raw_correction_rpm = 0.0f;
+    g_task3_applied_correction_rpm = 0.0f;
+}
+
+#if TASK3_STRAIGHT_CORR_SLEW_ENABLE
+static float Task3_GetStraightCorrectionSlewStep(void)
+{
+    return TASK3_STRAIGHT_CORR_SLEW_RPM_PER_S *
+           ((float)TASK3_CONTROL_MS / 1000.0f);
+}
+#endif
+
+static float Task3_UpdateStraightCorrectionSlew(float raw_correction_rpm)
+{
+    g_task3_raw_correction_rpm = raw_correction_rpm;
+
+#if TASK3_STRAIGHT_CORR_SLEW_ENABLE
+    if ((Task3_IsStraightSegment() != 0U) &&
+        (g_task3_gray.line_detected != 0U))
+    {
+        float delta;
+        float max_delta;
+
+        if ((g_task3_corr_slew_initialized == 0U) ||
+            (g_task3_corr_slew_active == 0U))
+        {
+            g_task3_corr_slew_initialized = 1U;
+            g_task3_corr_slew_active = 1U;
+            g_task3_applied_correction_rpm = raw_correction_rpm;
+            return g_task3_applied_correction_rpm;
+        }
+
+        max_delta = Task3_GetStraightCorrectionSlewStep();
+        delta = raw_correction_rpm - g_task3_applied_correction_rpm;
+        delta = Task3_ClampFloat(delta, -max_delta, max_delta);
+        g_task3_applied_correction_rpm += delta;
+        return g_task3_applied_correction_rpm;
+    }
+#endif
+
+    g_task3_corr_slew_initialized = 1U;
+    g_task3_corr_slew_active = 0U;
+    g_task3_applied_correction_rpm = raw_correction_rpm;
+    return g_task3_applied_correction_rpm;
 }
 
 static float Task3_GetPreCurveRampFactor(void)
@@ -651,6 +859,116 @@ static void Task3_SendDebugField(int32_t value)
     Task3_SendI32(value);
 }
 
+
+static int16_t Task3_ClampToI16(int32_t value)
+{
+    if (value > 32767L)
+    {
+        return 32767;
+    }
+    if (value < -32768L)
+    {
+        return -32768;
+    }
+    return (int16_t)value;
+}
+
+static void Task3_UpdateDiagSnapshot(void)
+{
+    int32_t left_count = Encoder_GetLeftCount();
+    int32_t right_count = Encoder_GetRightCount();
+
+    g_task3_diag_snapshot.segment = (uint8_t)g_task3_segment;
+    g_task3_diag_snapshot.control_phase = g_task3_debug_mode;
+    g_task3_diag_snapshot.progress_x10 = (int32_t)Task3_LinkedOperation_GetProgressX10();
+    g_task3_diag_snapshot.gray_error = g_task3_gray.error;
+    g_task3_diag_snapshot.raw_correction_rpm_x10 = Task3_ClampToI16(Task3_FloatToX10(g_task3_raw_correction_rpm));
+    g_task3_diag_snapshot.applied_correction_rpm_x10 = Task3_ClampToI16(Task3_FloatToX10(g_task3_applied_correction_rpm));
+    g_task3_diag_snapshot.base_rpm_x10 = Task3_ClampToI16(Task3_FloatToX10(g_task3_ramped_base_rpm));
+    g_task3_diag_snapshot.left_target_rpm_x10 = Task3_ClampToI16(Task3_FloatToX10(g_task3_gray.left_target_rpm));
+    g_task3_diag_snapshot.right_target_rpm_x10 = Task3_ClampToI16(Task3_FloatToX10(g_task3_gray.right_target_rpm));
+    g_task3_diag_snapshot.left_actual_rpm_x10 = Task3_ClampToI16(Task3_FloatToX10(SpeedPI_GetLeftRPM()));
+    g_task3_diag_snapshot.right_actual_rpm_x10 = Task3_ClampToI16(Task3_FloatToX10(SpeedPI_GetRightRPM()));
+    g_task3_diag_snapshot.left_pwm = (int16_t)SpeedPI_GetLeftPWM();
+    g_task3_diag_snapshot.right_pwm = (int16_t)SpeedPI_GetRightPWM();
+    g_task3_diag_snapshot.left_integral_x10 = Task3_ClampToI16(Task3_FloatToX10(SpeedPI_GetLeftIntegralTerm()));
+    g_task3_diag_snapshot.right_integral_x10 = Task3_ClampToI16(Task3_FloatToX10(SpeedPI_GetRightIntegralTerm()));
+    g_task3_diag_snapshot.left_encoder_delta = Encoder_GetLeftDeltaCount();
+    g_task3_diag_snapshot.right_encoder_delta = Encoder_GetRightDeltaCount();
+    g_task3_diag_snapshot.left_minus_right_count = left_count - right_count;
+    g_task3_diag_snapshot.black_mask = g_task3_gray.black_mask;
+    g_task3_diag_snapshot.line_lost = (g_task3_gray.line_detected == 0U) ? 1U : 0U;
+    g_task3_diag_snapshot.curve_lost_hold = g_task3_curve_lost_hold;
+    g_task3_diag_snapshot.straight_slew_active = g_task3_corr_slew_active;
+}
+
+static void Task3_ClearDiagControlSnapshot(void)
+{
+    int32_t left_count = Encoder_GetLeftCount();
+    int32_t right_count = Encoder_GetRightCount();
+
+    g_task3_gray.correction_rpm = 0.0f;
+    g_task3_gray.left_target_rpm = 0.0f;
+    g_task3_gray.right_target_rpm = 0.0f;
+    g_task3_ramped_base_rpm = 0.0f;
+    g_task3_desired_base_rpm = 0.0f;
+    g_task3_raw_correction_rpm = 0.0f;
+    g_task3_applied_correction_rpm = 0.0f;
+    g_task3_corr_slew_active = 0U;
+
+    g_task3_diag_snapshot.segment = (uint8_t)g_task3_segment;
+    g_task3_diag_snapshot.control_phase = g_task3_debug_mode;
+    g_task3_diag_snapshot.progress_x10 = (int32_t)Task3_LinkedOperation_GetProgressX10();
+    g_task3_diag_snapshot.gray_error = g_task3_gray.error;
+    g_task3_diag_snapshot.raw_correction_rpm_x10 = 0;
+    g_task3_diag_snapshot.applied_correction_rpm_x10 = 0;
+    g_task3_diag_snapshot.base_rpm_x10 = 0;
+    g_task3_diag_snapshot.left_target_rpm_x10 = 0;
+    g_task3_diag_snapshot.right_target_rpm_x10 = 0;
+    g_task3_diag_snapshot.left_actual_rpm_x10 = 0;
+    g_task3_diag_snapshot.right_actual_rpm_x10 = 0;
+    g_task3_diag_snapshot.left_pwm = 0;
+    g_task3_diag_snapshot.right_pwm = 0;
+    g_task3_diag_snapshot.left_integral_x10 = 0;
+    g_task3_diag_snapshot.right_integral_x10 = 0;
+    g_task3_diag_snapshot.left_encoder_delta = Encoder_GetLeftDeltaCount();
+    g_task3_diag_snapshot.right_encoder_delta = Encoder_GetRightDeltaCount();
+    g_task3_diag_snapshot.left_minus_right_count = left_count - right_count;
+    g_task3_diag_snapshot.black_mask = g_task3_gray.black_mask;
+    g_task3_diag_snapshot.line_lost = (g_task3_gray.line_detected == 0U) ? 1U : 0U;
+    g_task3_diag_snapshot.curve_lost_hold = g_task3_curve_lost_hold;
+    g_task3_diag_snapshot.straight_slew_active = g_task3_corr_slew_active;
+}
+
+static void Task3_StopAndClearControl(void)
+{
+    Task3_ResetStartupRampState();
+    Task3_ResetStraightCorrectionSlew();
+    SpeedPI_Reset();
+    Motor_Brake();
+    Task3_ClearDiagControlSnapshot();
+}
+
+static void Task3_ApplyCorrectionAndTargets(void)
+{
+    float target_min_rpm;
+
+    g_task3_gray.correction_rpm =
+        Task3_UpdateStraightCorrectionSlew(g_task3_gray.correction_rpm);
+
+    target_min_rpm = (g_task3_startup_ramp_active != 0U) ?
+                     0.0f : GrayTrack_GetTargetMinRPM();
+
+    g_task3_gray.left_target_rpm = Task3_ClampFloat(
+        g_task3_ramped_base_rpm + g_task3_gray.correction_rpm,
+        target_min_rpm,
+        GrayTrack_GetTargetMaxRPM());
+    g_task3_gray.right_target_rpm = Task3_ClampFloat(
+        g_task3_ramped_base_rpm - g_task3_gray.correction_rpm,
+        target_min_rpm,
+        GrayTrack_GetTargetMaxRPM());
+}
+
 static uint8_t Task3_GetParamMode(void)
 {
     if (g_task3_straight_transition != 0U)
@@ -694,8 +1012,21 @@ static void Task3_UpdateFinishWindow(void)
 
 static int32_t Task3_GetFinishStopCount(void)
 {
-    return Task3_GetLapTargetCount() -
-           Task3_DistanceCmToCount(TASK3_FINISH_STOP_OFFSET_CM);
+    int32_t lap_target_count = Task3_GetLapTargetCount();
+    int32_t advance_count = Task3_DistanceCmToCount(TASK3_FINISH_STOP_OFFSET_CM);
+
+    if (Task3_IsFinishExtraAdvanceEnabled() != 0U)
+    {
+        /* Positive extra advance means an earlier stop trigger. */
+        advance_count += Task3_DistanceCmToCount(TASK3_FINISH_EXTRA_ADVANCE_CM);
+    }
+
+    if (advance_count >= lap_target_count)
+    {
+        return 0;
+    }
+
+    return lap_target_count - advance_count;
 }
 
 static int32_t Task3_GetBPlusStopTargetCount(void)
@@ -764,7 +1095,7 @@ static void Task3_SendDebugLine(void)
     Task3_SendDebugField(Task3_FloatToX10(g_task3_gray.right_target_rpm));
     Task3_SendDebugField(Task3_FloatToX10(SpeedPI_GetLeftRPM()));
     Task3_SendDebugField(Task3_FloatToX10(SpeedPI_GetRightRPM()));
-    Task3_SendDebugField(Task3_FloatToX10(g_task3_gray_base_rpm));
+    Task3_SendDebugField(Task3_FloatToX10(g_task3_ramped_base_rpm));
     Task3_SendDebugField(Task3_FloatToX100(g_task3_gray_kp_rpm));
     Task3_SendDebugField(Task3_FloatToX10(g_task3_gray_correction_max));
     Task3_SendDebugField((int32_t)g_task3_gray.black_mask);
@@ -824,8 +1155,7 @@ static void Task3_StraightDiagStep(void)
 static void Task3_StopForLost(void)
 {
     g_task3_curve_lost_hold = 0U;
-    SpeedPI_Update(0.0f, 0.0f);
-    Motor_Brake();
+    Task3_StopAndClearControl();
 }
 
 static void Task3_RunCurveLostHold(void)
@@ -870,7 +1200,9 @@ static void Task3_HandleLostLine(void)
 static void Task3_ApplyGrayParams(void)
 {
     uint8_t deadband = TASK3_NORMAL_ERROR_DEADBAND;
-    float base_rpm = TASK3_STRAIGHT_BASE_RPM;
+    float straight_base_rpm = Task3_GetProfileStraightBaseRPM();
+    float curve_base_rpm = Task3_GetProfileCurveBaseRPM();
+    float base_rpm = straight_base_rpm;
     float kp_rpm = TASK3_STRAIGHT_KP_RPM;
     float correction_max = TASK3_STRAIGHT_CORRECTION_MAX;
     float rise_step = TASK3_STRAIGHT_RISE_STEP;
@@ -880,8 +1212,8 @@ static void Task3_ApplyGrayParams(void)
     {
         float ramp = Task3_GetCurveRampFactor();
 
-        base_rpm = Task3_LerpFloat(TASK3_STRAIGHT_BASE_RPM,
-                                   TASK3_CURVE_BASE_RPM,
+        base_rpm = Task3_LerpFloat(straight_base_rpm,
+                                   curve_base_rpm,
                                    ramp);
         kp_rpm = Task3_LerpFloat(TASK3_STRAIGHT_KP_RPM,
                                  TASK3_CURVE_KP_RPM,
@@ -900,8 +1232,8 @@ static void Task3_ApplyGrayParams(void)
     {
         float ramp = Task3_GetPreCurveRampFactor();
 
-        base_rpm = Task3_LerpFloat(TASK3_STRAIGHT_BASE_RPM,
-                                   TASK3_PRE_CURVE_BASE_RPM,
+        base_rpm = Task3_LerpFloat(straight_base_rpm,
+                                   curve_base_rpm,
                                    ramp);
         kp_rpm = Task3_LerpFloat(TASK3_STRAIGHT_KP_RPM,
                                  TASK3_PRE_CURVE_KP_RPM,
@@ -917,12 +1249,14 @@ static void Task3_ApplyGrayParams(void)
                                     ramp);
     }
 
+    base_rpm = Task3_UpdateStartupBaseRamp(base_rpm, board_millis());
     Task3_SetGrayParamsSmooth(deadband,
                               base_rpm,
                               kp_rpm,
                               correction_max,
                               rise_step,
                               fall_step);
+    g_task3_ramped_base_rpm = g_task3_gray_base_rpm;
 }
 
 static void Task3_ControlStep(void)
@@ -942,14 +1276,14 @@ static void Task3_ControlStep(void)
     if (Task3_RunPointStop(board_millis()) != 0U)
     {
         g_task3_debug_mode = 8U;
+        Task3_ClearDiagControlSnapshot();
         Task3_SendDebugLine();
         return;
     }
     if (Task3_ShouldStopAtBcExitCompStart() != 0U)
     {
         g_task3_debug_mode = 7U;
-        SpeedPI_Reset();
-        Motor_Brake();
+        Task3_StopAndClearControl();
         Task3_SendDebugLine();
         g_task3_running = 0U;
         return;
@@ -957,8 +1291,7 @@ static void Task3_ControlStep(void)
     if (g_task3_lap_done != 0U)
     {
         g_task3_debug_mode = 6U;
-        SpeedPI_Reset();
-        Motor_Brake();
+        Task3_StopAndClearControl();
         Task3_SendDebugLine();
         g_task3_running = 0U;
         return;
@@ -967,19 +1300,18 @@ static void Task3_ControlStep(void)
     Task3_ApplyGrayParams();
     GrayTrack_Update();
     GrayTrack_GetOutput(&g_task3_gray);
+    Task3_ApplyCorrectionAndTargets();
 
     if (Gray_IsI2COk() == 0U)
     {
         g_task3_debug_mode = 5U;
-        SpeedPI_Reset();
-        Motor_Brake();
+        Task3_StopAndClearControl();
     }
     else if (Task3_ShouldStopAtFinish() != 0U)
     {
         g_task3_lap_done = 1U;
         g_task3_debug_mode = 6U;
-        SpeedPI_Reset();
-        Motor_Brake();
+        Task3_StopAndClearControl();
         Task3_SendDebugLine();
         g_task3_running = 0U;
         return;
@@ -1001,6 +1333,7 @@ static void Task3_ControlStep(void)
         SpeedPI_Update(g_task3_gray.left_target_rpm,
                        g_task3_gray.right_target_rpm);
     }
+    Task3_UpdateDiagSnapshot();
     Task3_SendDebugLine();
     Task3_UpdateStraightTransitionTimer();
 }
@@ -1015,6 +1348,9 @@ void Task3_LinkedOperation_StartMode(uint32_t now_ms, Task3_RunMode mode)
     g_task3_next_control_ms = now_ms;
     g_task3_start_ms = now_ms;
     g_task3_run_mode = mode;
+    g_task3_motion_profile = Task3_GetDefaultProfile(mode);
+    g_task3_debug_stream_enabled = TASK3_PERIODIC_CSV_ENABLE;
+    Task3_StartStartupRamp(now_ms);
 #if TASK3_STRAIGHT_DIAG_MODE
     Encoder_ClearCount();
 #endif
@@ -1042,6 +1378,8 @@ void Task3_LinkedOperation_StartMode(uint32_t now_ms, Task3_RunMode mode)
     g_task3_point_stop_mask = 0U;
     Task3_RecordSegmentEncoderStart();
     Task3_UpdateSegmentByEncoder();
+    Task3_ClearDiagControlSnapshot();
+    Task3_StartStraightCorrectionSlew();
 }
 
 void Task3_LinkedOperation_Start(uint32_t now_ms)
@@ -1051,14 +1389,22 @@ void Task3_LinkedOperation_Start(uint32_t now_ms)
 
 void Task3_LinkedOperation_SetDebugEnabled(uint8_t enabled)
 {
+#if TASK3_PERIODIC_CSV_ENABLE
     g_task3_debug_stream_enabled = (enabled != 0U) ? 1U : 0U;
+#else
+    (void)enabled;
+    g_task3_debug_stream_enabled = 0U;
+#endif
 }
 
 void Task3_LinkedOperation_Stop(void)
 {
     g_task3_running = 0U;
+    Task3_ResetStartupRampState();
+    Task3_ResetStraightCorrectionSlew();
     SpeedPI_Reset();
     Motor_Coast();
+    Task3_ClearDiagControlSnapshot();
 }
 
 void Task3_LinkedOperation_Update(uint32_t now_ms)
@@ -1167,4 +1513,19 @@ void Task3_LinkedOperation_Run(void)
         Task3_LinkedOperation_Update(board_millis());
         delay_ms(5U);
     }
+}
+
+const Task3_DiagSnapshot *Task3_LinkedOperation_GetDiagSnapshot(void)
+{
+    return &g_task3_diag_snapshot;
+}
+
+void Task3_LinkedOperation_CopyDiagSnapshot(Task3_DiagSnapshot *snapshot)
+{
+    if (snapshot == 0)
+    {
+        return;
+    }
+
+    *snapshot = g_task3_diag_snapshot;
 }

@@ -24,9 +24,12 @@ typedef struct
 {
     float target_rpm;
     float actual_rpm;
+    float error_rpm;
     float integral;
     float output;
     float raw_output;
+    float feedforward;
+    float proportional;
     int pwm;
 } SpeedPIChannel;
 
@@ -44,9 +47,12 @@ static void SpeedPI_ResetChannel(SpeedPIChannel *channel)
 {
     channel->target_rpm = 0.0f;
     channel->actual_rpm = 0.0f;
+    channel->error_rpm = 0.0f;
     channel->integral = 0.0f;
     channel->output = 0.0f;
     channel->raw_output = 0.0f;
+    channel->feedforward = 0.0f;
+    channel->proportional = 0.0f;
     channel->pwm = 0;
 }
 
@@ -74,9 +80,12 @@ static void SpeedPI_UpdateChannel(SpeedPIChannel *channel,
     if (target_rpm <= 0.0f)
     {
         channel->target_rpm = 0.0f;
+        channel->error_rpm = 0.0f;
         channel->integral = 0.0f;
         channel->output = 0.0f;
         channel->raw_output = 0.0f;
+        channel->feedforward = 0.0f;
+        channel->proportional = 0.0f;
         channel->pwm = 0;
         return;
     }
@@ -91,6 +100,9 @@ static void SpeedPI_UpdateChannel(SpeedPIChannel *channel,
     feedforward = (ff_offset_pwm * ff_offset_scale) +
                   (ff_pwm_per_rpm * control_target_rpm);
     proportional = kp * error;
+    channel->error_rpm = error;
+    channel->feedforward = feedforward;
+    channel->proportional = proportional;
     candidate_integral = channel->integral + (ki * error * SPEED_CONTROL_DT_SEC);
     candidate_output = feedforward + proportional + candidate_integral;
 
@@ -115,6 +127,26 @@ static void SpeedPI_UpdateChannel(SpeedPIChannel *channel,
     channel->pwm = (int)(channel->output + 0.5f);
 }
 
+static void SpeedPI_FillCalibrationSample(const SpeedPIChannel *channel,
+                                          float command_target_rpm,
+                                          SpeedPI_CalibrationSample *sample)
+{
+    if (sample == 0)
+    {
+        return;
+    }
+
+    sample->command_target_rpm = command_target_rpm;
+    sample->control_target_rpm = channel->target_rpm;
+    sample->actual_rpm = channel->actual_rpm;
+    sample->error_rpm = channel->error_rpm;
+    sample->output_pwm = channel->output;
+    sample->raw_pwm = channel->raw_output;
+    sample->feedforward_pwm = channel->feedforward;
+    sample->p_term = channel->proportional;
+    sample->integral_term = channel->integral;
+    sample->pwm = channel->pwm;
+}
 void SpeedPI_Init(void)
 {
     SpeedPI_Reset();
@@ -159,11 +191,75 @@ void SpeedPI_UpdateRightOnly(float target_rpm)
     move(0, g_right.pwm);
 }
 
+void SpeedPI_UpdateRightCalibrationDirect(float target_rpm,
+                                          SpeedPI_CalibrationSample *sample)
+{
+    SpeedPI_ResetChannel(&g_left);
+    SpeedPI_UpdateChannel(&g_right, target_rpm, Encoder_GetRightSpeed(),
+                          SPEED_RIGHT_KP, SPEED_RIGHT_KI,
+                          SPEED_RIGHT_FF_OFFSET_PWM,
+                          SPEED_RIGHT_FF_PWM_PER_RPM,
+                          SPEED_TARGET_STEP_DISABLED,
+                          SPEED_RIGHT_PWM_STEP_MAX);
+    move(0, g_right.pwm);
+
+    SpeedPI_FillCalibrationSample(&g_right, target_rpm, sample);
+
+}
+
+void SpeedPI_UpdateLeftCalibrationDirect(float target_rpm,
+                                         SpeedPI_CalibrationSample *sample)
+{
+    SpeedPI_ResetChannel(&g_right);
+    SpeedPI_UpdateChannel(&g_left, target_rpm, Encoder_GetLeftSpeed(),
+                          SPEED_LEFT_KP, SPEED_LEFT_KI,
+                          SPEED_LEFT_FF_OFFSET_PWM,
+                          SPEED_LEFT_FF_PWM_PER_RPM,
+                          SPEED_TARGET_STEP_DISABLED,
+                          SPEED_LEFT_PWM_STEP_MAX);
+    move(g_left.pwm, 0);
+
+    SpeedPI_FillCalibrationSample(&g_left, target_rpm, sample);
+}
+
+void SpeedPI_UpdateBothCalibrationDirect(float left_target_rpm,
+                                         float right_target_rpm,
+                                         SpeedPI_CalibrationSample *left_sample,
+                                         SpeedPI_CalibrationSample *right_sample)
+{
+    SpeedPI_UpdateChannel(&g_left, left_target_rpm, Encoder_GetLeftSpeed(),
+                          SPEED_LEFT_KP, SPEED_LEFT_KI,
+                          SPEED_LEFT_FF_OFFSET_PWM,
+                          SPEED_LEFT_FF_PWM_PER_RPM,
+                          SPEED_TARGET_STEP_DISABLED,
+                          SPEED_LEFT_PWM_STEP_MAX);
+    SpeedPI_UpdateChannel(&g_right, right_target_rpm, Encoder_GetRightSpeed(),
+                          SPEED_RIGHT_KP, SPEED_RIGHT_KI,
+                          SPEED_RIGHT_FF_OFFSET_PWM,
+                          SPEED_RIGHT_FF_PWM_PER_RPM,
+                          SPEED_TARGET_STEP_DISABLED,
+                          SPEED_RIGHT_PWM_STEP_MAX);
+    move(g_left.pwm, g_right.pwm);
+
+    SpeedPI_FillCalibrationSample(&g_left, left_target_rpm, left_sample);
+    SpeedPI_FillCalibrationSample(&g_right, right_target_rpm, right_sample);
+}
+
 void SpeedPI_Reset(void)
 {
     SpeedPI_ResetChannel(&g_left);
     SpeedPI_ResetChannel(&g_right);
     Motor_Coast();
+}
+
+void SpeedPI_ResetLeftOnly(void)
+{
+    SpeedPI_ResetChannel(&g_left);
+}
+
+void SpeedPI_ResetRightOnly(void)
+{
+    SpeedPI_ResetChannel(&g_right);
 }
 
 int SpeedPI_GetLeftPWM(void) { return g_left.pwm; }
@@ -174,3 +270,9 @@ float SpeedPI_GetLeftTarget(void) { return g_left.target_rpm; }
 float SpeedPI_GetRightTarget(void) { return g_right.target_rpm; }
 float SpeedPI_GetLeftRPM(void) { return g_left.actual_rpm; }
 float SpeedPI_GetRightRPM(void) { return g_right.actual_rpm; }
+float SpeedPI_GetLeftFeedforwardPWM(void) { return g_left.feedforward; }
+float SpeedPI_GetLeftPTerm(void) { return g_left.proportional; }
+float SpeedPI_GetLeftIntegralTerm(void) { return g_left.integral; }
+float SpeedPI_GetRightFeedforwardPWM(void) { return g_right.feedforward; }
+float SpeedPI_GetRightPTerm(void) { return g_right.proportional; }
+float SpeedPI_GetRightIntegralTerm(void) { return g_right.integral; }

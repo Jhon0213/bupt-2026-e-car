@@ -1,4 +1,6 @@
-#include "Hardware/Diagnostics/ControlTimingDiag.h"
+﻿#include "Hardware/Diagnostics/ControlTimingDiag.h"
+
+#include "Application/BuildConfig.h"
 
 #include "Hardware/StarFlash.h"
 #include "Public/Board/board.h"
@@ -10,8 +12,12 @@ static uint8_t g_has_last_control_start;
 
 static void Diag_SendChar(char ch)
 {
+#if ARCH001_TEXT_OUTPUT_ENABLE
     uart0_send_char(ch);
     StarFlash_SendByte((uint8_t)ch);
+#else
+    (void)ch;
+#endif
 }
 
 static void Diag_SendString(const char *text)

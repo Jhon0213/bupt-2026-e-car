@@ -460,6 +460,16 @@
               <FilePath>..\Application\Task3_LinkedOperation.h</FilePath>
             </File>
             <File>
+              <FileName>TaskDualLoopDiag.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\TaskDualLoopDiag.c</FilePath>
+            </File>
+            <File>
+              <FileName>TaskDualLoopDiag.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\TaskDualLoopDiag.h</FilePath>
+            </File>
+            <File>
               <FileName>Task1_AutoTrace.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Application\Task1_AutoTrace.c</FilePath>
@@ -518,6 +528,16 @@
               <FileName>OledRealtimeTime.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\Application\OledRealtimeTime.h</FilePath>
+            </File>
+            <File>
+              <FileName>SpeedCalibrationTest.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Application\SpeedCalibrationTest.c</FilePath>
+            </File>
+            <File>
+              <FileName>SpeedCalibrationTest.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>..\Application\SpeedCalibrationTest.h</FilePath>
             </File>
           </Files>
         </Group>

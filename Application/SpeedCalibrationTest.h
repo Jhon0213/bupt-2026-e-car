@@ -1,0 +1,15 @@
+#ifndef APPLICATION_SPEED_CALIBRATION_TEST_H_
+#define APPLICATION_SPEED_CALIBRATION_TEST_H_
+
+typedef enum
+{
+    SPEED_CAL_RIGHT_OPEN_LOOP = 0,
+    SPEED_CAL_RIGHT_CLOSED_LOOP,
+    SPEED_CAL_LEFT_OPEN_LOOP,
+    SPEED_CAL_LEFT_CLOSED_LOOP,
+    SPEED_CAL_BOTH_EQUAL
+} SpeedCalibrationTestCase;
+
+void SpeedCalibrationTest_Run(void);
+
+#endif
